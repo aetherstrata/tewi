@@ -5,7 +5,7 @@ import :type_adapter;
 
 import std;
 
-export namespace tewi
+namespace tewi
 {
 template <>
 struct SqliteTypeAdapter<i32>

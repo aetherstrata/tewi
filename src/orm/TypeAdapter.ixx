@@ -5,7 +5,7 @@ import :sqlite_statement;
 
 import std;
 
-export namespace tewi
+namespace tewi
 {
 /**
  * @brief Primary adapter template for mapping C++ types to SQLite values.
@@ -17,7 +17,7 @@ export namespace tewi
  *
  * @tparam T C++ type adapted for SQLite storage and retrieval.
  */
-template <typename T>
+export template <typename T>
 struct SqliteTypeAdapter
 {
     /**
