@@ -1,0 +1,76 @@
+---
+BasedOnStyle: Microsoft
+IndentWidth: 4
+---
+Language: Cpp
+
+InsertNewlineAtEOF: true
+
+UseTab: Never
+ColumnLimit: 100
+AccessModifierOffset: -4
+
+AlignAfterOpenBracket: true
+
+AlignConsecutiveAssignments:
+  Enabled: true
+  AcrossComments: false
+  AcrossEmptyLines: false
+  AlignCompound: true
+
+AlignConsecutiveMacros: Consecutive
+
+# Short case expressions on the same line.
+AllowShortCaseLabelsOnASingleLine: true
+AllowShortCaseExpressionOnASingleLine: true
+
+AlignConsecutiveShortCaseStatements:
+  Enabled: true
+  AcrossComments: false
+  AcrossEmptyLines: false
+
+AlignEscapedNewlines: LeftWithLastLine
+
+AlignOperands: Align
+
+# Allow putting all parameters on the next line if the list does not fit
+AllowAllArgumentsOnNextLine: true
+AllowAllParametersOfDeclarationOnNextLine: true
+
+AllowBreakBeforeNoexceptSpecifier: OnlyWithParen
+
+AllowShortBlocksOnASingleLine: Empty
+AllowShortCompoundRequirementOnASingleLine: true
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: WithoutElse
+AllowShortLambdasOnASingleLine: Empty
+AllowShortLoopsOnASingleLine: true
+AllowShortEnumsOnASingleLine: true
+
+# Break all the things
+BreakBeforeBraces: Custom
+BraceWrapping:
+  SplitEmptyFunction: false
+  SplitEmptyNamespace: false
+  SplitEmptyRecord: false
+  BeforeLambdaBody: true
+  AfterEnum: false
+
+BreakBeforeBinaryOperators: NonAssignment
+BreakBeforeConceptDeclarations: Always
+BreakBeforeTernaryOperators: true
+BreakConstructorInitializers: BeforeComma
+BreakTemplateDeclarations: Yes
+
+FixNamespaceComments: true
+
+# Indentation
+IndentCaseBlocks: false
+IndentCaseLabels: false
+LambdaBodyIndentation: OuterScope
+
+# Alignment
+DerivePointerAlignment: false
+PointerAlignment: Left
+ReferenceAlignment: Left
+---
