@@ -147,9 +147,11 @@ TEST_CASE("ORM Metadata: Table and Column Reflection", "[orm][metadata]")
 
     SECTION("Primary Key Resolution")
     {
-        // find_pk() evaluates to string_view at compile time
-        STATIC_REQUIRE(AuthorTable::pk_name == "id");
-        STATIC_REQUIRE(BookTable::pk_name == "id");
+        STATIC_REQUIRE(std::tuple_size_v<AuthorTable::KeyTuple> == 1);
+        STATIC_REQUIRE(std::tuple_element_t<0, AuthorTable::KeyTuple>::ColumnName == "id");
+
+        STATIC_REQUIRE(std::tuple_size_v<BookTable::KeyTuple> == 1);
+        STATIC_REQUIRE(std::tuple_element_t<0, BookTable::KeyTuple>::ColumnName == "id");
     }
 
     SECTION("Column Name Resolution via Member Pointers")

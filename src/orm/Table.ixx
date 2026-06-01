@@ -27,7 +27,8 @@ private:
 public:
     using RowType      = T;
     using ColumnsTuple = std::tuple<Cols...>;
-    using KeyType      = detail::primary_key_tuple_t<Cols...>;
+    using KeyTuple     = detail::PrimaryKeyColumns<Cols...>;
+    using KeyType      = detail::PrimaryKeyType<Cols...>;
 
     static constexpr std::string_view TableName = name_storage.view();
 
@@ -61,24 +62,6 @@ public:
         }.template operator()<Cols>(), ...);
         return result;
     }
-
-    // -----------------------------------------------------------------------
-    //  Primary-key column name (first column tagged PrimaryKey<>)
-    // -----------------------------------------------------------------------
-    static consteval std::string_view find_pk()
-    {
-        std::string_view result{};
-        ([&]() constexpr
-        {
-            if (Cols::IsPrimaryKey && result.empty())
-            {
-                result = Cols::ColumnName;
-            }
-        }(), ...);
-        return result;
-    }
-
-    static constexpr std::string_view pk_name = find_pk();
 
     // -----------------------------------------------------------------------
     //  DDL

@@ -51,7 +51,28 @@ template <typename First, typename... Rest>
 struct primary_key_tuple<First, Rest...>
 {
 private:
-    using tail_type = typename primary_key_tuple<Rest...>::type;
+    using tail_type = primary_key_tuple<Rest...>::type;
+
+public:
+    using type = std::conditional_t<First::IsPrimaryKey,
+                                    typename tuple_prepend<First, tail_type>::type,
+                                    tail_type>;
+};
+
+template <typename... Cols>
+using PrimaryKeyColumns = primary_key_tuple<Cols...>::type;
+
+template <typename... Cols>
+struct primary_key_type
+{
+    using type = std::tuple<>;
+};
+
+template <typename First, typename... Rest>
+struct primary_key_type<First, Rest...>
+{
+private:
+    using tail_type = primary_key_type<Rest...>::type;
 
 public:
     using type = std::conditional_t<First::IsPrimaryKey,
@@ -60,7 +81,7 @@ public:
 };
 
 template <typename... Cols>
-using primary_key_tuple_t = typename primary_key_tuple<Cols...>::type;
+using PrimaryKeyType = primary_key_type<Cols...>::type;
 
 // -----------------------------------------------------------------------
 //  Build full DDL suffix for a pack of constraints (except FK REFERENCES).
