@@ -4,7 +4,7 @@ import :contraints;
 
 import std;
 
-export namespace tewi::detail
+namespace tewi::detail
 {
 
 // -----------------------------------------------------------------------
@@ -89,18 +89,18 @@ public:
 };
 
 // Convenience alias
-template <typename TableType, typename TargetTable>
+export template <typename TableType, typename TargetTable>
 using FkColumn = FindFkColumn<TableType, TargetTable, typename TableType::ColumnsTuple>::type;
 
 // Concept: TableType has a FK column pointing to TargetTable
-template <typename TableType, typename TargetTable>
+export template <typename TableType, typename TargetTable>
 concept HasFkTo = !std::is_void_v<FkColumn<TableType, TargetTable>>;
 
 // -----------------------------------------------------------------------
 //  Given a FK Column type, extract the referenced column name.
 //  Walks the Column's constraints to find the ForeignKey<> tag.
 // -----------------------------------------------------------------------
-template <typename FkCol, typename TargetTable>
+export template <typename FkCol, typename TargetTable>
 consteval std::string_view fk_referenced_col_name()
 {
     std::string_view result{};
@@ -110,7 +110,7 @@ consteval std::string_view fk_referenced_col_name()
         {
             if constexpr (IsFkTo<C, TargetTable>::value)
             {
-                result = TargetTable::template column_name_for<C::Member>();
+                result = TargetTable::template columnNameOf<C::Member>();
             }
         }.template operator()<Cs>(), ...);
     }(static_cast<FkCol::Constraints*>(nullptr));

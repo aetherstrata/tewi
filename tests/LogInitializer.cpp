@@ -1,22 +1,20 @@
 #include <catch2/reporters/catch_reporter_event_listener.hpp>
 #include <catch2/reporters/catch_reporter_registrars.hpp>
 
-#include <utility>
-
 import tewi;
 import std;
 
 class LoggerSetup : public Catch::EventListenerBase
 {
 public:
-    using Catch::EventListenerBase::EventListenerBase;
+    using EventListenerBase::EventListenerBase;
 
     // called exactly once before all tests
     void testRunStarting(Catch::TestRunInfo const&) override
     {
-        tewi::registerLogger([](std::source_location loc, tewi::LogLevel level, std::string&& msg, void* user_data)
+        tewi::registerLogger([](std::source_location loc, tewi::LogLevel level, std::string&& msg, void* user_data) static
         {
-            static auto getLevelString = [](tewi::LogLevel lvl)
+            auto getLevelString = [](tewi::LogLevel lvl)
             {
                 switch (lvl)
                 {
@@ -30,8 +28,7 @@ public:
                 std::unreachable();
             };
 
-            // Forward Catch2's log messages to the console with a simple format.
-            // This allows us to see log output in test runners that capture stdout.
+            // Forward Tewi's log messages to the console with a simple format.
             std::string_view level_str = getLevelString(level);
             std::cout << "[" << level_str << "] "
                       << loc.file_name() << ":" << loc.line() << " - "

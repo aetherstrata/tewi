@@ -1,7 +1,5 @@
 export module tewi:projection;
 
-// #include "Registry.h"
-
 import :constraint_helpers;
 import :fk_helpers;
 import :member_traits;

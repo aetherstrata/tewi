@@ -1,6 +1,5 @@
 module;
 #include <sqlite3.h>
-#include <utility> // Apparently std::to_underlying is not part of the module?
 #include "common/Log.h"
 module tewi;
 

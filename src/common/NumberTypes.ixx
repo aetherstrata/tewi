@@ -1,5 +1,3 @@
-module;
-#include <stdfloat>
 export module tewi:number_types;
 
 import std;

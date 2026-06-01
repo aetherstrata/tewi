@@ -5,7 +5,7 @@ import std;
 //  MemberPtrTraits - decompose pointer-to-member types
 // ============================================================================
 
-export namespace tewi::detail
+namespace tewi::detail
 {
 /**
  * @brief Extracts the first value from a non-type template parameter pack.
@@ -98,7 +98,7 @@ template <auto MP>
 using ObjectOf = member_ptr<std::remove_cv_t<decltype(MP)>>::ObjectType;
 
 // All MPs share the same object type - works for 1 or more MPs.
-template <auto... MPs>
+export template <auto... MPs>
 concept HomogeneousMemberPtrs =
     sizeof...(MPs) > 0 &&
     (std::is_same_v<ObjectOf<MPs>,
