@@ -2,6 +2,7 @@ add_executable(${PROJECT_NAME}_tests
         ColumnSchemaTests.cpp
         OrmTests.cpp
         TableSchemaTests.cpp
+        LogInitializer.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}_tests PRIVATE Catch2::Catch2WithMain ${PROJECT_NAME})

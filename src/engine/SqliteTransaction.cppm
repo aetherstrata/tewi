@@ -1,3 +1,5 @@
+module;
+#include "common/Log.h"
 module tewi;
 
 import :sqlite_transaction;
@@ -22,7 +24,7 @@ SqliteTransaction::~SqliteTransaction() noexcept
     }
     catch (...)
     {
-        error("Failed to roll back transaction in destructor. Exception swallowed to avoid "
+        LOG_ERR("Failed to roll back transaction in destructor. Exception swallowed to avoid "
               "std::terminate().");
     }
 }

@@ -1,3 +1,5 @@
+module;
+#include "common/Log.h"
 module tewi;
 
 import :sqlite_connection;
@@ -33,15 +35,15 @@ void runMigrations(SqliteConnection& database)
 
     if (dbVersion <= 0) throw SqliteError("Failed to read database version");
 
-    debug(std::format("Current database version: {}", dbVersion));
-    debug("Checking for migrations...");
+    LOG_DBG("Current database version: {}", dbVersion);
+    LOG_DBG("Checking for migrations...");
 
     for (const auto& migration : migrations)
     {
         // Nothing to do if the database is already at or above this version
         if (migration.version <= dbVersion) continue;
 
-        info(std::format("Applying DB migration to version {}...", migration.version));
+        LOG_INFO("Applying DB migration to version {}...", migration.version);
 
         // Each migration is atomic. Partial application is never committed
         auto txn = database.beginTransaction();

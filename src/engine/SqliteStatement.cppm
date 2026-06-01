@@ -1,5 +1,6 @@
 module;
 #include <sqlite3.h>
+#include "common/Log.h"
 module tewi;
 
 import :sqlite_statement;
@@ -21,8 +22,7 @@ static void check(const tewi::i32 rc, std::string_view context, tewi::i32 ok_sen
 {
     if (rc != ok_sentinel)
     {
-        tewi::error(std::format("SQLite operation failed: {} {}", context,
-                                tewi::engine::SqliteError::PrettyCode(rc)));
+        LOG_ERR("SQLite operation failed: {} {}", context, tewi::engine::SqliteError::PrettyCode(rc));
         throw tewi::engine::SqliteError(std::string(context), rc);
     }
 }
@@ -83,7 +83,7 @@ bool SqliteStatement::step()
     if (rc == SQLITE_ROW) return true;
     if (rc == SQLITE_DONE) return false;
 
-    error(std::format("step() failed while stepping statement {}", SqliteError::PrettyCode(rc)));
+    LOG_ERR("step() failed while stepping statement {}", SqliteError::PrettyCode(rc));
     throw SqliteError("step() failed", rc);
 }
 

@@ -35,6 +35,7 @@ add_library(${PROJECT_NAME}
         src/engine/SqliteMigration.cppm
         src/engine/SqliteStatement.cppm
         src/engine/SqliteTransaction.cppm
+        src/common/Log.h
 )
 
 target_sources(${PROJECT_NAME} PUBLIC
