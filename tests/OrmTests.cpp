@@ -73,10 +73,10 @@ using BookTable = Table<"books", Book,
     >>;
 } // namespace tewi::tests
 
-ORM_REGISTER_TABLE(tewi::tests::User, tewi::tests::UserTable)
-ORM_REGISTER_TABLE(tewi::tests::Post, tewi::tests::PostTable)
-ORM_REGISTER_TABLE(tewi::tests::Author, tewi::tests::AuthorTable)
-ORM_REGISTER_TABLE(tewi::tests::Book, tewi::tests::BookTable)
+TEWI_REGISTER_TABLE(tewi::tests::User, tewi::tests::UserTable)
+TEWI_REGISTER_TABLE(tewi::tests::Post, tewi::tests::PostTable)
+TEWI_REGISTER_TABLE(tewi::tests::Author, tewi::tests::AuthorTable)
+TEWI_REGISTER_TABLE(tewi::tests::Book, tewi::tests::BookTable)
 
 // ---------------------------------------------------------
 // 3. Tests
