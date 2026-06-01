@@ -133,6 +133,21 @@ public:
         stmt.exec();
     }
 
+    /// Delete the row identified by a primary-key value pack.
+    template <typename... PKValues>
+    requires detail::HasPrimaryKey<TableType>
+          && (sizeof...(PKValues) == std::tuple_size_v<typename TableType::KeyType>)
+          && detail::allOf<SqliteAdaptable<PKValues>...>
+    void remove(PKValues&&... pk_values)
+    {
+        const std::string sql = "DELETE FROM " + std::string(TableType::TableName) + " WHERE "
+                                + TableType::primary_key_where_clause() + ";";
+        auto stmt = _db.prepare(sql);
+        i32 idx = 1;
+        (SqliteTypeAdapter<PKValues>::bind(stmt, idx++, pk_values), ...);
+        stmt.exec();
+    }
+
     /// Delete the row identified by a composite primary key stored in the row object.
     void remove(const RowType& obj)
     requires detail::HasPrimaryKey<TableType> && (TableType::PrimaryKeyCount > 1)

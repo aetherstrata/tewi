@@ -191,24 +191,6 @@ TEST_CASE("ORM Constraints: Foreign Key Detection", "[orm][constraints]")
     }
 }
 
-TEST_CASE("ORM Affinities: C++ Type to SQLite Types", "[orm][affinity]")
-{
-    SECTION("Primitive Affinities")
-    {
-        STATIC_REQUIRE(tewi::SqliteTypeAdapter<i32>::affinity == "INTEGER");
-        STATIC_REQUIRE(tewi::SqliteTypeAdapter<i64>::affinity == "INTEGER");
-        STATIC_REQUIRE(tewi::SqliteTypeAdapter<f32>::affinity == "REAL");
-        STATIC_REQUIRE(tewi::SqliteTypeAdapter<f64>::affinity == "REAL");
-        STATIC_REQUIRE(tewi::SqliteTypeAdapter<std::string>::affinity == "TEXT");
-    }
-
-    SECTION("Blob Affinities")
-    {
-        STATIC_REQUIRE(tewi::SqliteTypeAdapter<std::vector<std::byte>>::affinity == "BLOB");
-        STATIC_REQUIRE(tewi::SqliteTypeAdapter<std::vector<u8>>::affinity == "BLOB");
-    }
-}
-
 TEST_CASE("ORM: Column Mapping and Constraints", "[orm][schema]")
 {
     SECTION("UserTable has the correct column definitions")

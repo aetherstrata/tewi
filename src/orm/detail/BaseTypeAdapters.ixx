@@ -11,6 +11,7 @@ template <>
 struct SqliteTypeAdapter<i32>
 {
     static constexpr std::string_view affinity = "INTEGER";
+    static constexpr bool nullable = false;
 
     static void bind(engine::SqliteStatement& stmt, const i32 idx, const i32& val)
     {
@@ -26,6 +27,7 @@ template <>
 struct SqliteTypeAdapter<i64>
 {
     static constexpr std::string_view affinity = "INTEGER";
+    static constexpr bool nullable = false;
 
     static void bind(engine::SqliteStatement& stmt, const i32 idx, const i64& val)
     {
@@ -41,6 +43,7 @@ template <>
 struct SqliteTypeAdapter<f64>
 {
     static constexpr std::string_view affinity = "REAL";
+    static constexpr bool nullable = false;
 
     static void bind(engine::SqliteStatement& stmt, const i32 idx, const f64& val)
     {
@@ -56,6 +59,7 @@ template <>
 struct SqliteTypeAdapter<f32>
 {
     static constexpr std::string_view affinity = "REAL";
+    static constexpr bool nullable = false;
 
     static void bind(engine::SqliteStatement& stmt, const i32 idx, const f32& val)
     {
@@ -71,6 +75,7 @@ template <>
 struct SqliteTypeAdapter<std::string>
 {
     static constexpr std::string_view affinity = "TEXT";
+    static constexpr bool nullable = false;
 
     static void bind(engine::SqliteStatement& stmt, const i32 idx, const std::string& val)
     {
@@ -86,6 +91,7 @@ template <>
 struct SqliteTypeAdapter<bool>
 {
     static constexpr std::string_view affinity = "INTEGER";
+    static constexpr bool nullable = false;
 
     static void bind(engine::SqliteStatement& stmt, const i32 idx, const bool& val)
     {
@@ -101,6 +107,7 @@ template <>
 struct SqliteTypeAdapter<std::vector<u8>>
 {
     static constexpr std::string_view affinity = "BLOB";
+    static constexpr bool nullable = false;
 
     static void bind(engine::SqliteStatement& stmt, const i32 idx, const std::vector<u8>& val)
     {
@@ -118,6 +125,7 @@ template <>
 struct SqliteTypeAdapter<std::vector<std::byte>>
 {
     static constexpr std::string_view affinity = "BLOB";
+    static constexpr bool nullable = false;
 
     static void bind(engine::SqliteStatement& stmt, const i32 idx, const std::vector<std::byte>& val)
     {
@@ -135,7 +143,6 @@ requires SqliteAdaptable<T>
 struct SqliteTypeAdapter<std::optional<T>>
 {
     static constexpr std::string_view affinity = SqliteTypeAdapter<T>::affinity;
-
     static constexpr bool nullable = true;
 
     static void bind(engine::SqliteStatement& stmt, i32 idx, const std::optional<T>& val)

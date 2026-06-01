@@ -12,33 +12,33 @@ namespace tewi::tests
 /// UserGroup: many-to-many relationship (user_id + group_id form composite PK)
 struct UserGroup
 {
-    int user_id    = 0;
-    int group_id   = 0;
+    i32 user_id    = 0;
+    i32 group_id   = 0;
     std::string role;
 };
 
 /// OrderItem: order items with composite key (order_id + item_number)
 struct OrderItem
 {
-    int order_id   = 0;
-    int item_number = 0;
+    i32 order_id   = 0;
+    i32 item_number = 0;
     std::string description;
-    int quantity   = 0;
+    i32 quantity   = 0;
 };
 
 /// CompositePkTable: three-column composite key
 struct ThreeKeyComposite
 {
-    int tenant_id  = 0;
-    int region_id  = 0;
-    int resource_id = 0;
+    i32 tenant_id  = 0;
+    i32 region_id  = 0;
+    f32 resource_id = 0;
     std::string name;
 };
 
 /// SingleColumnTable for reference
 struct SimpleEntity
 {
-    int id = 0;
+    i32 id = 0;
     std::string value;
 };
 
@@ -83,7 +83,6 @@ using SimpleEntityTable = Table<"simple_entities", SimpleEntity,
     >
 >;
 
-} // namespace tewi::tests
 
 // =========================================================================
 //  DDL and Compile-time Tests
@@ -104,10 +103,12 @@ TEST_CASE("ORM Table Schema: Composite Primary Keys", "[orm][schema][composite-p
         using Col0 = std::tuple_element_t<0, UserGroupTable::ColumnsTuple>;
         using Col1 = std::tuple_element_t<1, UserGroupTable::ColumnsTuple>;
         using Col2 = std::tuple_element_t<2, UserGroupTable::ColumnsTuple>;
+        using PkType = UserGroupTable::KeyType;
 
         STATIC_REQUIRE(Col0::ColumnName == "user_id");
         STATIC_REQUIRE(Col1::ColumnName == "group_id");
         STATIC_REQUIRE(Col2::ColumnName == "role");
+        STATIC_REQUIRE(std::is_same_v<PkType, std::tuple<i32, i32>>);
 
         STATIC_REQUIRE(Col0::IsPrimaryKey);
         STATIC_REQUIRE(Col1::IsPrimaryKey);
@@ -121,6 +122,8 @@ TEST_CASE("ORM Table Schema: Composite Primary Keys", "[orm][schema][composite-p
         using Col0 = std::tuple_element_t<0, ThreeKeyCompositeTable::ColumnsTuple>;
         using Col1 = std::tuple_element_t<1, ThreeKeyCompositeTable::ColumnsTuple>;
         using Col2 = std::tuple_element_t<2, ThreeKeyCompositeTable::ColumnsTuple>;
+
+        STATIC_REQUIRE(std::is_same_v<ThreeKeyCompositeTable::KeyType, std::tuple<i32, i32, f32>>);
 
         STATIC_REQUIRE(Col0::IsPrimaryKey);
         STATIC_REQUIRE(Col1::IsPrimaryKey);
@@ -305,8 +308,8 @@ TEST_CASE("ORM Hydration: Populate structs from composite key results", "[orm][r
 {
     using namespace tewi::tests;
 
-    auto raw = tewi::engine::InMemory();
-    tewi::OrmDatabase db(raw);
+    auto raw = engine::InMemory();
+    OrmDatabase db(raw);
     auto user_groups = db.repo<UserGroupTable>();
     user_groups.createTable();
 
@@ -347,8 +350,8 @@ TEST_CASE("ORM Binding: Bind composite key structs to statements", "[orm][runtim
 {
     using namespace tewi::tests;
 
-    auto raw = tewi::engine::InMemory();
-    tewi::OrmDatabase db(raw);
+    auto raw = engine::InMemory();
+    OrmDatabase db(raw);
     auto user_groups = db.repo<UserGroupTable>();
     user_groups.createTable();
 
@@ -359,9 +362,9 @@ TEST_CASE("ORM Binding: Bind composite key structs to statements", "[orm][runtim
         user_groups.insert(ug);
 
         auto check = db.select<UserGroupTable>()
-					   .where<&UserGroup::user_id>(5)
-					   .where<&UserGroup::group_id>(20)
-					   .firstOrDefault();
+                       .where<&UserGroup::user_id>(5)
+                       .where<&UserGroup::group_id>(20)
+                       .firstOrDefault();
 
         REQUIRE(check.has_value());
         REQUIRE(check->user_id == 5);
@@ -378,9 +381,9 @@ TEST_CASE("ORM Binding: Bind composite key structs to statements", "[orm][runtim
         user_groups.insert(ug2);
 
         auto rows = db.select<UserGroupTable>()
-					  .where<&UserGroup::group_id>(15)
-					  .orderBy<&UserGroup::user_id>()
-					  .toVector();
+                      .where<&UserGroup::group_id>(15)
+                      .orderBy<&UserGroup::user_id>()
+                      .toVector();
 
         REQUIRE(rows.size() == 2);
         REQUIRE(rows[0].user_id == 3);
@@ -394,8 +397,8 @@ TEST_CASE("ORM Database: Full CRUD with composite keys", "[orm][runtime][composi
 {
     using namespace tewi::tests;
 
-    auto raw = tewi::engine::InMemory();
-    tewi::OrmDatabase db(raw);
+    auto raw = engine::InMemory();
+    OrmDatabase db(raw);
     auto order_items = db.repo<OrderItemTable>();
 
     order_items.createTable();
@@ -457,14 +460,14 @@ TEST_CASE("ORM Three-Column Composite Keys", "[orm][runtime][composite-pk]")
 {
     using namespace tewi::tests;
 
-    auto raw = tewi::engine::InMemory();
-    tewi::OrmDatabase db(raw);
+    auto raw = engine::InMemory();
+    OrmDatabase db(raw);
     auto resources = db.repo<ThreeKeyCompositeTable>();
     resources.createTable();
 
     SECTION("Insert and query by three-column key")
     {
-        ThreeKeyComposite resource{1, 5, 42, "Production Database"};
+        ThreeKeyComposite resource{1, 5, 42.0f, "Production Database"};
 
         resources.insert(resource);
 
@@ -483,9 +486,9 @@ TEST_CASE("ORM Three-Column Composite Keys", "[orm][runtime][composite-pk]")
 
     SECTION("Query by partial composite key")
     {
-        ThreeKeyComposite r1{1, 5, 1, "Resource 1"};
-        ThreeKeyComposite r2{1, 5, 2, "Resource 2"};
-        ThreeKeyComposite r3{1, 6, 1, "Resource 3"};
+        ThreeKeyComposite r1{1, 5, 1.0f, "Resource 1"};
+        ThreeKeyComposite r2{1, 5, 2.0f, "Resource 2"};
+        ThreeKeyComposite r3{1, 6, 1.0f, "Resource 3"};
 
         resources.insert(r1);
         resources.insert(r2);
@@ -504,14 +507,15 @@ TEST_CASE("ORM Three-Column Composite Keys", "[orm][runtime][composite-pk]")
 
     SECTION("Delete by composite key")
     {
-        ThreeKeyComposite resource{1, 5, 42, "Production Database"};
+        ThreeKeyComposite resource{1, 5, 42.0f, "Production Database"};
 
         resources.insert(resource);
 
         REQUIRE(resources.count() == 1);
 
-        resources.remove(resource);
+        resources.remove(1, 5, 42.0f32);
 
+        REQUIRE(resources.count() == 0);
     }
 }
-
+} // namespace tewi::tests

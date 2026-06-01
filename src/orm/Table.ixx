@@ -22,28 +22,22 @@ template <FixedString Name, typename T, typename... Cols, typename... Idxs>
 requires detail::UniqueColumnNames<Cols...> && detail::UniqueMemberPointers<Cols...>
 struct Table<Name, T, Columns<Cols...>, Indexes<Idxs...>>
 {
+private:
+    static constexpr auto name_storage = Name;
+public:
     using RowType      = T;
     using ColumnsTuple = std::tuple<Cols...>;
+    using KeyType      = detail::primary_key_tuple_t<Cols...>;
 
-    static constexpr auto name_storage = Name;
     static constexpr std::string_view TableName = name_storage.view();
 
-    static constexpr usize ColumnsCount = sizeof...(Cols);
-    static constexpr usize IndexCount   = sizeof...(Idxs);
+    static constexpr usize ColumnsCount    = sizeof...(Cols);
+    static constexpr usize IndexCount      = sizeof...(Idxs);
+    static constexpr usize PrimaryKeyCount = ((Cols::IsPrimaryKey ? usize{1} : usize{0}) + ...);
 
-    static consteval usize primary_key_count()
-    {
-        return (usize{0} + ... + (Cols::IsPrimaryKey ? usize{1} : usize{0}));
-    }
+    static constexpr bool HasAutoIncrementPrimaryKey = detail::anyOf<Cols::IsAutoincrement...>;
 
-    static consteval bool has_autoincrement_primary_key()
-    {
-        return (Cols::IsAutoincrement || ...);
-    }
-
-    static constexpr usize PrimaryKeyCount = primary_key_count();
-
-    static constexpr bool HasAutoIncrementPrimaryKey = has_autoincrement_primary_key();
+    static_assert(PrimaryKeyCount > 0, "A table must have at least one PrimaryKey.");
 
     static_assert(!(HasAutoIncrementPrimaryKey && PrimaryKeyCount != 1),
                   "AUTOINCREMENT primary keys are only allowed when the table has exactly one primary key column.");
@@ -210,8 +204,6 @@ private:
 
     [[nodiscard]] static std::string primary_key_sql()
     {
-        if constexpr (PrimaryKeyCount == 0) return {};
-
         std::string sql = " PRIMARY KEY (";
         bool first      = true;
         ([&]() constexpr
