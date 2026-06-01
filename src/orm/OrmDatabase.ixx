@@ -96,8 +96,8 @@ public:
         using LT = detail::TableRegistry<LObj>::TableType;
         using RT = detail::TableRegistry<RObj>::TableType;
 
-        constexpr std::string_view lc = LT::template column_name_for<LeftMember>();
-        constexpr std::string_view rc = RT::template column_name_for<RightMember>();
+        constexpr std::string_view lc = LT::template columnNameOf<LeftMember>();
+        constexpr std::string_view rc = RT::template columnNameOf<RightMember>();
 
         static_assert(!lc.empty() && !rc.empty(),
                       "JoinOn<>: one or both member pointers are not mapped to columns.");

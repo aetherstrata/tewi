@@ -110,7 +110,7 @@ consteval std::string_view fk_referenced_col_name()
         {
             if constexpr (IsFkTo<C, TargetTable>::value)
             {
-                result = TargetTable::template columnNameOf<C::Member>();
+                result = TargetTable::template ColumnOf<C::Member>::ColumnName;
             }
         }.template operator()<Cs>(), ...);
     }(static_cast<FkCol::Constraints*>(nullptr));

@@ -30,12 +30,12 @@ if(TEWI_ENABLE_TRACE)
 endif()
 
 add_library(${PROJECT_NAME}
+        src/common/Log.h
         src/common/Logging.cppm
         src/engine/SqliteConnection.cppm
         src/engine/SqliteMigration.cppm
         src/engine/SqliteStatement.cppm
         src/engine/SqliteTransaction.cppm
-        src/common/Log.h
 )
 
 target_sources(${PROJECT_NAME} PUBLIC

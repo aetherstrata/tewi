@@ -88,6 +88,30 @@ struct member_ptr<Field Obj::*>
     using FieldType  = Field;
 };
 
+template <auto MP, typename... Ts>
+struct mp_column;
+
+template <auto MP>
+struct mp_column<MP>
+{
+    using type = void;
+};
+
+template <auto MP, typename Col, typename... Rest>
+struct mp_column<MP, Col, Rest...>
+{
+    static consteval bool match()
+    {
+        if constexpr (requires { Col::MemberPtr == MP; })
+        {
+            return Col::MemberPtr == MP;
+        }
+        else return false;
+    }
+
+    using type = std::conditional_t<match(), Col, typename mp_column<MP, Rest...>::type>;
+};
+
 // MemberPtrs... -> std::tuple<FieldType1, FieldType2, …>
 template <auto... MemberPtrs>
 using MembersTuple =
@@ -108,13 +132,4 @@ concept HomogeneousMemberPtrs =
 template <auto... MPs>
 requires HomogeneousMemberPtrs<MPs...>
 using projection_object_t = ObjectOf<firstOf<MPs...>>;
-
-// Requires that the two columns have member pointers that can
-// be compared for equality (i.e. they point to the same field).
-template<typename A, typename B>
-concept ComparableMemberPtr =
-requires
-{
-    { A::MemberPtr == B::MemberPtr } -> std::convertible_to<bool>;
-};
 } // namespace tewi::detail

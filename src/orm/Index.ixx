@@ -34,7 +34,7 @@ struct Index
         // Fold over MemberPtrs, resolving each to its column name at compile time.
         ([&]<auto MP>()
         {
-            constexpr std::string_view col = TableType::template column_name_for<MP>();
+            constexpr std::string_view col = TableType::template ColumnOf<MP>::ColumnName;
             static_assert(!col.empty(),
                           "Index: member pointer not mapped to any column in this table.");
             if (!first) sql += ", ";

@@ -36,7 +36,7 @@ public:
     template <auto MemberPtr, typename V>
     [[nodiscard]] SelectQuery where(V&& value) &&
     {
-        constexpr std::string_view col = TableType::template column_name_for<MemberPtr>();
+        constexpr std::string_view col = TableType::template ColumnOf<MemberPtr>::ColumnName;
         static_assert(!col.empty(), "Where<MP>: member not mapped to a column in this table.");
         return push_where(std::string(col), "=", std::forward<V>(value));
     }
@@ -45,7 +45,7 @@ public:
     template <auto MemberPtr, typename V>
     [[nodiscard]] SelectQuery whereOp(std::string_view op, V&& value) &&
     {
-        constexpr std::string_view col = TableType::template column_name_for<MemberPtr>();
+        constexpr std::string_view col = TableType::template ColumnOf<MemberPtr>::ColumnName;
         static_assert(!col.empty(), "WhereOp<MP>: member not mapped to a column.");
         return push_where(std::string(col), std::string(op), std::forward<V>(value));
     }
@@ -109,7 +109,7 @@ public:
     template <auto MemberPtr>
     [[nodiscard]] SelectQuery orderBy(Order order = Order::ASC) &&
     {
-        constexpr std::string_view col = TableType::template column_name_for<MemberPtr>();
+        constexpr std::string_view col = TableType::template ColumnOf<MemberPtr>::ColumnName;
         static_assert(!col.empty(), "OrderBy<MP>: member not mapped to a column.");
 
         _state.order_clauses.emplace_back(std::string(col), order);
@@ -133,7 +133,7 @@ public:
     template <auto MemberPtr>
     [[nodiscard]] SelectQuery distinct() &&
     {
-        constexpr std::string_view col = TableType::template column_name_for<MemberPtr>();
+        constexpr std::string_view col = TableType::template columnNameOf<MemberPtr>();
         static_assert(!col.empty(),
                       "Distinct<MP>: member pointer not mapped to any column in this table.");
 

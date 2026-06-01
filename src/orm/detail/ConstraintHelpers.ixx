@@ -137,7 +137,7 @@ consteval bool unique_member_ptrs()
     {
         return (([]<typename Other>()
         {
-            if constexpr (ComparableMemberPtr<First, Other>)
+            if constexpr (requires{ First::MemberPtr == Other::MemberPtr; })
             {
                 return First::MemberPtr != Other::MemberPtr;
             }
@@ -162,7 +162,11 @@ export template <typename T>
 concept IsTable = requires {
     T::TableName;
     T::ColumnsCount;
+    T::PrimaryKeyCount;
     typename T::RowType;
+    typename T::KeyType;
     typename T::ColumnsTuple;
+    typename T::IndicesTuple;
+    typename T::KeyTuple;
 };
 } // namespace tewi::detail

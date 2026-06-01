@@ -1,50 +1,20 @@
-#include "tewi/RegisterTable.h"
-
 #include <catch2/catch_test_macros.hpp>
+
+#include "Tables.h"
 
 import tewi;
 
 namespace tewi::tests
 {
-struct User
+TEST_CASE("Table Registry", "[orm][table][registry]")
 {
-    int id = 0;
-    std::string username;
-    std::optional<int> age;
-};
-
-struct Post
-{
-    int id        = 0;
-    int author_id = 0;
-    std::string content;
-};
-
-using UserTable =
-    Table<"users", User,
-          Columns<Column<"id", &User::id, PrimaryKey<>>,
-                  Column<"username", &User::username, NotNull, Unique>, Column<"age", &User::age>>>;
-
-using PostTable =
-    Table<"posts", Post,
-          Columns<Column<"id", &Post::id, PrimaryKey<>>,
-                  Column<"author_id", &Post::author_id, ForeignKey<UserTable, &User::id>>,
-                  Column<"content", &Post::content>>>;
-} // namespace tewi::tests
-
-TEWI_REGISTER_TABLE(tewi::tests::User, tewi::tests::UserTable)
-
-namespace tewi::tests
-{
-TEST_CASE("Table Registration", "[orm][registry]")
-{
-    // Verify that the table registry correctly maps User and Post to their tables
-    using UserReg = detail::TableRegistry<User>;
-    using PostReg = detail::TableRegistry<Post>;
+    // Verify that the table registry correctly maps User and Post
+    using SimpleReg = detail::TableRegistry<SimpleEntity>;
+    using NonReg = detail::TableRegistry<UnregisteredEntity>;
 
     SECTION("User shall be registered to UserTable")
     {
-        STATIC_REQUIRE(std::is_same_v<UserReg::TableType, UserTable>);
+        STATIC_REQUIRE(std::is_same_v<SimpleReg::TableType, SimpleEntityTable>);
     }
     SECTION("HasRegisteredTable shall be true for User")
     {
@@ -52,12 +22,11 @@ TEST_CASE("Table Registration", "[orm][registry]")
     }
     SECTION("Post shall not be registered to PostTable")
     {
-        STATIC_REQUIRE_FALSE(std::is_same_v<PostReg::TableType, PostTable>);
-        STATIC_REQUIRE(std::is_same_v<PostReg::TableType, void>);
+        STATIC_REQUIRE(std::is_same_v<NonReg::TableType, void>);
     }
     SECTION("HasRegisteredTable shall be false for Post")
     {
-        STATIC_REQUIRE_FALSE(detail::HasRegisteredTable<Post>);
+        STATIC_REQUIRE_FALSE(detail::HasRegisteredTable<UnregisteredEntity>);
     }
 }
 } // namespace tewi::tests

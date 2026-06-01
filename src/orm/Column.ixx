@@ -53,7 +53,7 @@ public:
             {
                 using RT  = Cs::Table;
                 sql      += " REFERENCES " + std::string(RT::TableName) + "("
-                       + std::string(RT::template column_name_for<Cs::Member>()) + ")";
+                       + std::string(RT::template ColumnOf<Cs::Member>::ColumnName) + ")";
             }
         }(), ...);
         return sql;
@@ -64,5 +64,4 @@ public:
 template <typename... Is>
 struct Columns
 {};
-
 } // namespace tewi

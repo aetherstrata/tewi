@@ -13,13 +13,17 @@
  * @param RowType Plain row struct to register.
  * @param TableAlias Table descriptor type associated with @p RowType.
  *
- * @note @c RowType must be a plain row type and not a @c Table<> descriptor.
+ * @note @c RowType must be a plain C++ data type and @c TableAlias must
+ *       be a @c Table<> descriptor.
  * @warning This macro must be used at namespace scope.
  */
 #define TEWI_REGISTER_TABLE(RowType, TableAlias)                     \
 static_assert(!::tewi::detail::IsTable<RowType>,                     \
               "TEWI_REGISTER_TABLE: RowType must be a plain struct, "\
               "not a Table<> descriptor.");                          \
+static_assert(::tewi::detail::IsTable<TableAlias>,                   \
+             "TEWI_REGISTER_TABLE: TableAlias must be a Table<> "    \
+             "descriptor.");                                         \
 template <>                                                          \
 struct tewi::detail::TableRegistry<RowType>                          \
 {                                                                    \

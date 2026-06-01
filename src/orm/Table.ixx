@@ -27,8 +27,12 @@ private:
 public:
     using RowType      = T;
     using ColumnsTuple = std::tuple<Cols...>;
+    using IndicesTuple = std::tuple<Idxs...>;
     using KeyTuple     = detail::PrimaryKeyColumns<Cols...>;
     using KeyType      = detail::PrimaryKeyType<Cols...>;
+
+    template <auto MP>
+    using ColumnOf = detail::mp_column<MP, Cols...>::type;
 
     static constexpr std::string_view TableName = name_storage.view();
 
@@ -42,26 +46,6 @@ public:
 
     static_assert(!(HasAutoIncrementPrimaryKey && PrimaryKeyCount != 1),
                   "AUTOINCREMENT primary keys are only allowed when the table has exactly one primary key column.");
-
-    // -----------------------------------------------------------------------
-    //  Compile-time column-name lookup by member pointer
-    // -----------------------------------------------------------------------
-    template <auto MP>
-    [[nodiscard]] static consteval std::string_view column_name_for()
-    {
-        std::string_view result{};
-        ([&]<typename Col>() constexpr
-        {
-            if constexpr (requires { Col::MemberPtr == MP; })
-            {
-                if (Col::MemberPtr == MP && result.empty())
-                {
-                    result = Col::ColumnName;
-                }
-            }
-        }.template operator()<Cols>(), ...);
-        return result;
-    }
 
     // -----------------------------------------------------------------------
     //  DDL
@@ -78,11 +62,8 @@ public:
             sql   += Cols::ddl();
             first  = false;
         }(), ...);
-        if constexpr (PrimaryKeyCount > 0)
-        {
-            sql += ",";
-            sql += primary_key_sql();
-        }
+        sql += ",";
+        sql += primary_key_sql();
         sql += ");";
         return sql;
     }

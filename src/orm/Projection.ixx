@@ -33,7 +33,7 @@ public:
     template <auto MP, typename V>
     [[nodiscard]] ColumnProjectionQuery where(V&& value) &&
     {
-        constexpr std::string_view col = TableType::template column_name_for<MP>();
+        constexpr std::string_view col = TableType::template ColumnOf<MP>::ColumnName;
         static_assert(!col.empty(), "Where<MP>: member not mapped.");
         return push_where(std::string(col), "=", std::forward<V>(value));
     }
@@ -41,7 +41,7 @@ public:
     template <auto MP, typename V>
     [[nodiscard]] ColumnProjectionQuery whereOp(std::string_view op, V&& value) &&
     {
-        constexpr std::string_view col = TableType::template column_name_for<MP>();
+        constexpr std::string_view col = TableType::template columnNameOf<MP>();
         static_assert(!col.empty());
         return push_where(std::string(col), std::string(op), std::forward<V>(value));
     }
@@ -49,7 +49,7 @@ public:
     template <auto MP>
     [[nodiscard]] ColumnProjectionQuery orderBy(Order ord = Order::ASC) &&
     {
-        constexpr std::string_view col = TableType::template column_name_for<MP>();
+        constexpr std::string_view col = TableType::template columnNameOf<MP>();
         static_assert(!col.empty());
         _state.order_clauses.emplace_back(std::string(col), ord);
         return std::move(*this);
@@ -199,7 +199,7 @@ private:
         bool first = true;
         ([&]<auto MP>()
         {
-            constexpr std::string_view col = TableType::template column_name_for<MP>();
+            constexpr std::string_view col = TableType::template columnNameOf<MP>();
             static_assert(!col.empty(), "Select<MP>: member not mapped.");
             if (!first) sql += ", ";
             sql   += std::string(TableType::TableName) + "." + std::string(col);
@@ -315,7 +315,7 @@ private:
         bool first = true;
         ([&]<auto MP>()
         {
-            constexpr std::string_view col = T::template column_name_for<MP>();
+            constexpr std::string_view col = T::template columnNameOf<MP>();
             static_assert(!col.empty());
             if (!first) sql += ", ";
             sql   += std::string(T::TableName) + "." + std::string(col);

@@ -1,9 +1,13 @@
 add_executable(${PROJECT_NAME}_tests
         ColumnSchemaTests.cpp
-        CompositeKeyTests.cpp
+        PrimaryKeyTests.cpp
         OrmTests.cpp
         LogInitializer.cpp
         TypeAffinityTests.cpp
+        TableRegistryTests.cpp
+        TableMetaTests.cpp
+        CreateTableTests.cpp
+        Tables.h
 )
 
 target_link_libraries(${PROJECT_NAME}_tests PRIVATE Catch2::Catch2WithMain ${PROJECT_NAME})

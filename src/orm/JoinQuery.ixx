@@ -14,7 +14,7 @@ export namespace tewi
 {
 /// Carries multiple row types for a multi-table select projection.
 template <typename... Ts>
-struct SelectTables
+struct Select
 {};
 
 /// Marks the FROM table in a structured join expression.
@@ -61,8 +61,8 @@ public:
     [[nodiscard]] JoinQuery where(V&& v) &&
     {
         // MP must belong to LTable or RTable; we try both.
-        constexpr std::string_view lc = LTable::template column_name_for<MP>();
-        constexpr std::string_view rc = RTable::template column_name_for<MP>();
+        constexpr std::string_view lc = LTable::template ColumnOf<MP>::ColumnName;
+        constexpr std::string_view rc = RTable::template ColumnOf<MP>::ColumnName;
 
         static_assert(!lc.empty() || !rc.empty(), "Where<MP>: member not in joined tables.");
 
@@ -82,8 +82,8 @@ public:
     template <auto MP>
     [[nodiscard]] JoinQuery orderBy(Order order = Order::ASC) &&
     {
-        constexpr std::string_view lc = LTable::template column_name_for<MP>();
-        constexpr std::string_view rc = RTable::template column_name_for<MP>();
+        constexpr std::string_view lc = LTable::template columnNameOf<MP>();
+        constexpr std::string_view rc = RTable::template columnNameOf<MP>();
 
         static_assert(!lc.empty() || !rc.empty(), "OrderBy<MP>: member not in joined tables.");
 

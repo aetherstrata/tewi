@@ -4,18 +4,16 @@ import :sqlite_statement;
 
 import std;
 
+// ============================================================================
+//  QueryState  - WHERE / ORDER BY / LIMIT accumulated state
+// ============================================================================
+
 namespace tewi
 {
-
 export enum class Order { ASC, DESC };
-
-// ============================================================================
-//  §10  QueryState  - WHERE / ORDER BY / LIMIT accumulated state
-// ============================================================================
 
 namespace detail
 {
-
 struct WherePredicate
 {
     std::string column;
@@ -23,7 +21,7 @@ struct WherePredicate
     std::move_only_function<void(engine::SqliteStatement&, i32) const> binder;
 };
 
-export struct QueryState
+struct QueryState
 {
     std::vector<WherePredicate> predicates;
     std::vector<std::pair<std::string, Order>> order_clauses;
@@ -83,6 +81,5 @@ export struct QueryState
         }
     }
 };
-
 } // namespace detail
 } // namespace tewi

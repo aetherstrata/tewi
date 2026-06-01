@@ -5,78 +5,7 @@
 import tewi;
 import std;
 
-namespace tewi::tests
-{
-// ---------------------------------------------------------
-// 1. Define C++ Structs
-// ---------------------------------------------------------
-struct User
-{
-    int id = 0;
-    std::string username;
-    std::optional<int> age;
-};
-
-struct Post
-{
-    int id        = 0;
-    int author_id = 0;
-    std::string content;
-};
-
-struct Author
-{
-    int id;
-    std::string name;
-};
-
-struct Book
-{
-    int id;
-    int author_id;
-    std::string title;
-};
-
-struct UnregisteredEntity
-{
-    int dummy;
-};
-
-// ---------------------------------------------------------
-// 2. Map ORM Tables
-// ---------------------------------------------------------
-using UserTable = Table<"users", User,
-    Columns<
-        Column<"id", &User::id, PrimaryKey<>>,
-        Column<"username", &User::username, NotNull, Unique>,
-        Column<"age", &User::age>
-    >>;
-
-using PostTable = Table<"posts", Post,
-    Columns<
-        Column<"id", &Post::id, PrimaryKey<>>,
-        Column<"author_id", &Post::author_id, ForeignKey<UserTable, &User::id>>,
-        Column<"content", &Post::content>
-    >>;
-
-using AuthorTable = Table<"authors", Author,
-    Columns<
-        Column<"id", &Author::id, PrimaryKey<>>,
-        Column<"name", &Author::name, NotNull>
-    >>;
-
-using BookTable = Table<"books", Book,
-    Columns<
-        Column<"id", &Book::id, PrimaryKey<>>,
-        Column<"author_id", &Book::author_id, ForeignKey<AuthorTable, &Author::id>>,
-        Column<"title", &Book::title, Unique>
-    >>;
-} // namespace tewi::tests
-
-TEWI_REGISTER_TABLE(tewi::tests::User, tewi::tests::UserTable)
-TEWI_REGISTER_TABLE(tewi::tests::Post, tewi::tests::PostTable)
-TEWI_REGISTER_TABLE(tewi::tests::Author, tewi::tests::AuthorTable)
-TEWI_REGISTER_TABLE(tewi::tests::Book, tewi::tests::BookTable)
+#include "Tables.h"
 
 // ---------------------------------------------------------
 // 3. Tests
@@ -88,57 +17,24 @@ TEST_CASE("ORM Concepts: Type Classification Validation", "[orm][concepts]")
     SECTION("IsTable Concept")
     {
         // Valid tables should satisfy the concept
-        STATIC_REQUIRE(tewi::detail::IsTable<AuthorTable>);
-        STATIC_REQUIRE(tewi::detail::IsTable<BookTable>);
+        STATIC_REQUIRE(tewi::detail::IsTable<UserTable>);
+        STATIC_REQUIRE(tewi::detail::IsTable<PostTable>);
 
         // Plain structs or arbitrary types should fail the concept
-        STATIC_REQUIRE_FALSE(tewi::detail::IsTable<Author>);
+        STATIC_REQUIRE_FALSE(tewi::detail::IsTable<User>);
         STATIC_REQUIRE_FALSE(tewi::detail::IsTable<int>);
     }
 
     SECTION("HomogeneousMemberPtrs Concept")
     {
         // Valid: All pointers belong to the same struct
-        STATIC_REQUIRE(tewi::detail::HomogeneousMemberPtrs<&Author::id, &Author::name>);
+        STATIC_REQUIRE(tewi::detail::HomogeneousMemberPtrs<&User::id, &User::username>);
 
         // Invalid: Mixed pointers from different structs
-        STATIC_REQUIRE_FALSE(tewi::detail::HomogeneousMemberPtrs<&Author::id, &Book::title>);
+        STATIC_REQUIRE_FALSE(tewi::detail::HomogeneousMemberPtrs<&User::id, &Post::content>);
 
         // Invalid: Empty pack (requires at least 1)
         STATIC_REQUIRE_FALSE(tewi::detail::HomogeneousMemberPtrs<>);
-    }
-}
-
-TEST_CASE("ORM Metadata: Table and Column Reflection", "[orm][metadata]")
-{
-    SECTION("Compile-time Table Properties")
-    {
-        STATIC_REQUIRE(AuthorTable::TableName == "authors");
-        STATIC_REQUIRE(AuthorTable::ColumnsCount == 2);
-
-        STATIC_REQUIRE(BookTable::TableName == "books");
-        STATIC_REQUIRE(BookTable::ColumnsCount == 3);
-    }
-
-    SECTION("Primary Key Resolution")
-    {
-        STATIC_REQUIRE(std::tuple_size_v<AuthorTable::KeyTuple> == 1);
-        STATIC_REQUIRE(std::tuple_element_t<0, AuthorTable::KeyTuple>::ColumnName == "id");
-
-        STATIC_REQUIRE(std::tuple_size_v<BookTable::KeyTuple> == 1);
-        STATIC_REQUIRE(std::tuple_element_t<0, BookTable::KeyTuple>::ColumnName == "id");
-    }
-
-    SECTION("Column Name Resolution via Member Pointers")
-    {
-        // Compile-time lookups
-        STATIC_REQUIRE(AuthorTable::columnNameOf<&Author::name>() == "name");
-        STATIC_REQUIRE(BookTable::columnNameOf<&Book::author_id>() == "author_id");
-        STATIC_REQUIRE(AuthorTable::columnNameOf<&Author::id>() == "id");
-        STATIC_REQUIRE(BookTable::columnNameOf<&Book::title>() == "title");
-
-        // Querying a member pointer not in the table should return an empty view
-        STATIC_REQUIRE(AuthorTable::columnNameOf<&Book::id>().empty());
     }
 }
 
@@ -146,44 +42,40 @@ TEST_CASE("ORM Constraints: Foreign Key Detection", "[orm][constraints]")
 {
     SECTION("Directional Foreign Key Resolution")
     {
-        // BookTable has a FK pointing to AuthorTable
-        STATIC_REQUIRE(tewi::detail::HasFkTo<BookTable, AuthorTable>);
+        // PostTable has a FK pointing to UserTable
+        STATIC_REQUIRE(tewi::detail::HasFkTo<PostTable, UserTable>);
 
-        // AuthorTable does NOT have a FK pointing to BookTable
-        STATIC_REQUIRE_FALSE(tewi::detail::HasFkTo<AuthorTable, BookTable>);
+        // UserTable does NOT have a FK pointing to PostTable
+        STATIC_REQUIRE_FALSE(tewi::detail::HasFkTo<UserTable, PostTable>);
     }
 
     SECTION("Extracting Foreign Key Column Data")
     {
         // Isolate the column type that holds the FK
-        using FkCol = detail::FkColumn<BookTable, AuthorTable>;
+        using FkCol = detail::FkColumn<PostTable, UserTable>;
 
         // Ensure the correct column was found
         STATIC_REQUIRE(FkCol::ColumnName == "author_id");
 
         // Ensure the reference resolves back to the target table's correct column
         constexpr std::string_view ref_col =
-            tewi::detail::fk_referenced_col_name<FkCol, AuthorTable>();
+            tewi::detail::fk_referenced_col_name<FkCol, UserTable>();
         STATIC_REQUIRE(ref_col == "id");
     }
 }
 
-TEST_CASE("ORM: Column Mapping and Constraints", "[orm][schema]")
+TEST_CASE("ORM DDL: column list", "[orm][schema]")
 {
-    SECTION("UserTable has the correct column definitions")
+    SECTION("OrderItemTable column list without prefix")
     {
-        STATIC_REQUIRE(UserTable::ColumnsCount == 3);
-        STATIC_REQUIRE(std::tuple_element_t<0, UserTable::ColumnsTuple>::ColumnName == "id");
-        STATIC_REQUIRE(std::tuple_element_t<1, UserTable::ColumnsTuple>::ColumnName == "username");
-        STATIC_REQUIRE(std::tuple_element_t<2, UserTable::ColumnsTuple>::ColumnName == "age");
+        std::string cols = OrderItemTable::column_list();
+        REQUIRE(cols == "order_id, item_number, description, quantity");
     }
 
-    SECTION("PostTable has the correct column definitions")
+    SECTION("OrderItemTable column list with prefix")
     {
-        STATIC_REQUIRE(PostTable::ColumnsCount == 3);
-        STATIC_REQUIRE(std::tuple_element_t<0, PostTable::ColumnsTuple>::ColumnName == "id");
-        STATIC_REQUIRE(std::tuple_element_t<1, PostTable::ColumnsTuple>::ColumnName == "author_id");
-        STATIC_REQUIRE(std::tuple_element_t<2, PostTable::ColumnsTuple>::ColumnName == "content");
+        std::string cols = OrderItemTable::column_list("ug");
+        REQUIRE(cols == "ug.order_id, ug.item_number, ug.description, ug.quantity");
     }
 }
 
@@ -265,13 +157,13 @@ TEST_CASE("ORM: Advanced Queries and Filtering", "[orm][select]")
 TEST_CASE("ORM: Foreign Key Joins", "[orm][join]")
 {
     auto raw = tewi::engine::InMemory();
-    tewi::OrmDatabase db(raw);
+    OrmDatabase db(raw);
     tewi::createTablesIfNotExist<UserTable, PostTable>(raw);
 
-    i64 author_id = db.repo<UserTable>().insert({0, "Writer1", 35});
+    i64 id = db.repo<UserTable>().insert({0, "Writer1", 35});
 
-    db.repo<PostTable>().insert({.id=1, .author_id=static_cast<int>(author_id), .content="Hello World"});
-    db.repo<PostTable>().insert({.id=2, .author_id=static_cast<int>(author_id), .content="Second Post"});
+    db.repo<PostTable>().insert({.id=1, .author_id=static_cast<int>(id), .content="Hello World"});
+    db.repo<PostTable>().insert({.id=2, .author_id=static_cast<int>(id), .content="Second Post"});
 
     SECTION("Implicit Auto-FK Join")
     {
