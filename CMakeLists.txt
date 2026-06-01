@@ -69,6 +69,6 @@ target_sources(${PROJECT_NAME} PUBLIC
 
 target_link_libraries(${PROJECT_NAME} PUBLIC SQLite3::SQLite3)
 target_compile_definitions(${PROJECT_NAME} PUBLIC ${LOGGING_OPTIONS})
-target_include_directories(${PROJECT_NAME} INTERFACE "${CMAKE_SOURCE_DIR}/include")
+target_include_directories(${PROJECT_NAME} INTERFACE "${CMAKE_SOURCE_DIR}/include" PRIVATE "${CMAKE_SOURCE_DIR}/src")
 
 add_subdirectory(tests)

@@ -8,6 +8,31 @@ import std;
 namespace tewi::detail
 {
 // -----------------------------------------------------------------------
+//  PrimaryKey detection helpers
+// -----------------------------------------------------------------------
+template <typename PK>
+struct is_primary_key : std::false_type
+{};
+
+template <bool AI>
+struct is_primary_key<PrimaryKey<AI>> : std::true_type
+{};
+
+template <typename PK>
+constexpr bool isPrimaryKey = is_primary_key<PK>::value;
+
+template <typename PK>
+struct is_primary_key_autoincrement : std::false_type
+{};
+
+template <>
+struct is_primary_key_autoincrement<PrimaryKey<true>> : std::true_type
+{};
+
+template <typename PK>
+constexpr bool isAutoincrementPK = is_primary_key_autoincrement<PK>::value;
+
+// -----------------------------------------------------------------------
 //  Build full DDL suffix for a pack of constraints (except FK REFERENCES).
 // -----------------------------------------------------------------------
 template <typename... Cs>
@@ -33,20 +58,9 @@ template <typename... Cs>
     return sql;
 }
 
-// -----------------------------------------------------------------------
-//  PrimaryKey detection (handles both PK<true> and PK<false>)
-// -----------------------------------------------------------------------
-template <typename C>
-struct is_primary_key : std::false_type
-{};
-
-template <bool AI>
-struct is_primary_key<PrimaryKey<AI>> : std::true_type
-{};
-
 // Requires the table to have one primary key
 export template <typename TableType>
-concept HasPrimaryKey = !TableType::pk_name.empty();
+concept HasPrimaryKey = TableType::PrimaryKeyCount > 0;
 
 template <typename First, typename... Rest>
 consteval bool unique_column_names()

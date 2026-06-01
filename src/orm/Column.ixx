@@ -31,9 +31,11 @@ public:
 
     static constexpr std::string_view ColumnName = name_storage.view();
 
-    static constexpr bool IsPrimaryKey = (detail::is_primary_key<Cs>::value || ...);
+    static constexpr bool IsPrimaryKey = detail::anyOf<detail::isPrimaryKey<Cs>...>;
 
-    static constexpr bool HasForeignKey = (detail::is_foreign_key<Cs>::value || ...);
+    static constexpr bool IsAutoincrement = detail::anyOf<detail::isAutoincrementPK<Cs>...>;
+
+    static constexpr bool HasForeignKey = detail::anyOf<detail::isForeignKey<Cs>...>;
 
     // ------------------------------------------------------------------
     // DDL fragment for this column (without trailing comma).

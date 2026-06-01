@@ -13,13 +13,9 @@ struct User
 };
 
 using IdColumn = Column<"id", &User::id>;
-
 using AgeColumn = Column<"age", &User::age>;
-
 using NameColumn = Column<"name", &User::name>;
-
 using DuplicateNameColumn = Column<"id", &User::age>;
-
 using DuplicateMemberColumn = Column<"other_id", &User::id>;
 
 TEST_CASE("UniqueColumnNames shall accept distinct names", "[orm][schema][column]")

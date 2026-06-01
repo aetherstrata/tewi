@@ -219,9 +219,10 @@ TEST_CASE("ORM DDL: CREATE TABLE with Composite Primary Keys", "[orm][schema][co
         REQUIRE(ddl.find("group_id") != std::string::npos);
         REQUIRE(ddl.find("role") != std::string::npos);
 
-        // Both PK columns should have PRIMARY KEY constraint
-        REQUIRE(ddl.find("user_id") < ddl.find("PRIMARY KEY"));
-        REQUIRE(ddl.find("group_id") < ddl.find("PRIMARY KEY"));
+        // The primary key must be emitted once as a table constraint.
+        REQUIRE(ddl.find("user_id INTEGER PRIMARY KEY") == std::string::npos);
+        REQUIRE(ddl.find("group_id INTEGER PRIMARY KEY") == std::string::npos);
+        REQUIRE(ddl.find("PRIMARY KEY (user_id, group_id)") != std::string::npos);
     }
 
     SECTION("OrderItemTable DDL generation")
@@ -236,37 +237,34 @@ TEST_CASE("ORM DDL: CREATE TABLE with Composite Primary Keys", "[orm][schema][co
         REQUIRE(ddl.find("order_id") != std::string::npos);
         REQUIRE(ddl.find("item_number") != std::string::npos);
 
-        // Verify PRIMARY KEY appears for both key columns
-        size_t order_id_pos = ddl.find("order_id");
-        size_t item_number_pos = ddl.find("item_number");
-        size_t first_pk_pos = ddl.find("PRIMARY KEY", order_id_pos);
-        size_t second_pk_pos = ddl.find("PRIMARY KEY", first_pk_pos + 1);
-
-        REQUIRE(first_pk_pos != std::string::npos);
-        REQUIRE(second_pk_pos != std::string::npos);
+        // Verify the key is emitted once at table level.
+        REQUIRE(ddl.find("PRIMARY KEY (order_id, item_number)") != std::string::npos);
     }
 
     SECTION("ThreeKeyCompositeTable DDL generation")
     {
         std::string ddl = ThreeKeyCompositeTable::create_table_sql(true);
 
-        // All three key columns should be present
+        // All three key columns should be present.
         REQUIRE(ddl.find("tenant_id") != std::string::npos);
         REQUIRE(ddl.find("region_id") != std::string::npos);
         REQUIRE(ddl.find("resource_id") != std::string::npos);
 
-        // NotNull constraint on name
+        // NotNull constraint on name.
         REQUIRE(ddl.find("NOT NULL") != std::string::npos);
 
-        // Count PRIMARY KEY occurrences (should be 3)
-        int pk_count = 0;
-        size_t pos = 0;
-        while ((pos = ddl.find("PRIMARY KEY", pos)) != std::string::npos)
-        {
-            pk_count++;
-            pos += 11; // Length of "PRIMARY KEY"
-        }
-        REQUIRE(pk_count == 3);
+        REQUIRE(ddl.find("PRIMARY KEY (tenant_id, region_id, resource_id)") != std::string::npos);
+        REQUIRE(ddl.find("tenant_id INTEGER PRIMARY KEY") == std::string::npos);
+        REQUIRE(ddl.find("region_id INTEGER PRIMARY KEY") == std::string::npos);
+        REQUIRE(ddl.find("resource_id INTEGER PRIMARY KEY") == std::string::npos);
+    }
+
+    SECTION("SimpleEntityTable DDL generation")
+    {
+        std::string ddl = SimpleEntityTable::create_table_sql(true);
+
+        REQUIRE(ddl.find("PRIMARY KEY (id AUTOINCREMENT)") != std::string::npos);
+        REQUIRE(ddl.find("id INTEGER PRIMARY KEY") == std::string::npos);
     }
 }
 
@@ -502,6 +500,18 @@ TEST_CASE("ORM Three-Column Composite Keys", "[orm][runtime][composite-pk]")
         REQUIRE(rows.size() == 2);
         REQUIRE(rows[0].resource_id == 1);
         REQUIRE(rows[1].resource_id == 2);
+    }
+
+    SECTION("Delete by composite key")
+    {
+        ThreeKeyComposite resource{1, 5, 42, "Production Database"};
+
+        resources.insert(resource);
+
+        REQUIRE(resources.count() == 1);
+
+        resources.remove(resource);
+
     }
 }
 

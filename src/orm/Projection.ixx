@@ -383,8 +383,8 @@ template <auto... RightMPs>
 [[nodiscard]] auto ColumnProjectionQuery<TableType, MemberPtrs...>::join() &&
 {
     using RObj = detail::projection_object_t<RightMPs...>;
-    static_assert(detail::HasRegisteredTable<RObj>,
-                  "Join<MPs...>: right-side row type not registered.");
+    static_assert(detail::HasRegisteredTable<RObj>, "Join<MPs...>: right-side row type not registered.");
+
     using RT = detail::TableRegistry<RObj>::TableType;
 
     constexpr bool fwd = detail::HasFkTo<TableType, RT>;

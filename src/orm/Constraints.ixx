@@ -39,10 +39,6 @@ struct PrimaryKey
 {
     /// Whether `AUTOINCREMENT` is appended to the DDL clause.
     static constexpr bool AutoIncrement = autoIncrement;
-
-    /// The DDL suffix appended to the column definition.
-    static constexpr std::string_view Suffix =
-        AutoIncrement ? " PRIMARY KEY AUTOINCREMENT" : " PRIMARY KEY";
 };
 
 /**
@@ -87,9 +83,10 @@ struct Unique
 template <FixedString expr>
 struct Check
 {
+private:
     /// Stores the @c FixedString value to extend its lifetime.
     static constexpr auto expr_storage           = expr;
-
+public:
     /// The SQL expression embedded inside the @c CHECK(...) clause.
     static constexpr std::string_view Expression = expr_storage.view();
 };
@@ -114,9 +111,10 @@ struct Check
 template <FixedString expr>
 struct Regex
 {
+private:
     /// Stores the @c FixedString value to extend its lifetime.
     static constexpr auto expr_storage        = expr;
-
+public:
     /// The regex pattern passed as the first argument to @c regexp(...).
     static constexpr std::string_view Pattern = expr_storage.view();
 };

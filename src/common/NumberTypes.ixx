@@ -4,6 +4,10 @@ export module tewi:number_types;
 
 import std;
 
+// ============================================================================
+// NumberTypes - rust-like type aliases for numbers
+// ============================================================================
+
 export namespace tewi
 {
 /// Unsigned integer type capable of holding any array index.

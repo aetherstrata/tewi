@@ -10,13 +10,16 @@ export namespace tewi::detail
 // -----------------------------------------------------------------------
 //  FK detection helpers
 // -----------------------------------------------------------------------
-template <typename C>
+template <typename FK>
 struct is_foreign_key : std::false_type
 {};
 
 template <typename RT, auto RM>
 struct is_foreign_key<ForeignKey<RT, RM>> : std::true_type
 {};
+
+template <typename FK>
+constexpr bool isForeignKey = is_foreign_key<FK>::value;
 
 template <typename C, typename TargetTable>
 struct IsFkTo : std::false_type

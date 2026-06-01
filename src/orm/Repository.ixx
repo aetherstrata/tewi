@@ -100,18 +100,7 @@ public:
         }, typename TableType::ColumnsTuple{});
 
         // Bind PK last (WHERE clause)
-        std::apply([&](auto... cols)
-        {
-            ([&]<typename Col>(Col)
-            {
-                if constexpr (Col::IsPrimaryKey)
-                {
-                    using FT  = Col::FieldType;
-                    const auto& val = obj.*(Col::MemberPtr);
-                    SqliteTypeAdapter<FT>::bind(stmt, idx++, val);
-                }
-            }(cols), ...);
-        }, typename TableType::ColumnsTuple{});
+        TableType::bind_primary_key(stmt, obj, idx);
 
         stmt.exec();
     }
@@ -134,13 +123,24 @@ public:
 
     /// Delete the row with the given primary key value.
     template <typename PKType>
-    requires detail::HasPrimaryKey<TableType> && SqliteAdaptable<PKType>
+    requires detail::HasPrimaryKey<TableType> && SqliteAdaptable<PKType> && (TableType::PrimaryKeyCount == 1)
     void remove(const PKType& pk_value)
     {
         const std::string sql = "DELETE FROM " + std::string(TableType::TableName) + " WHERE "
-                                + std::string(TableType::pk_name) + " = ?;";
+                                + TableType::primary_key_where_clause() + ";";
         auto stmt = _db.prepare(sql);
         SqliteTypeAdapter<PKType>::bind(stmt, 1, pk_value);
+        stmt.exec();
+    }
+
+    /// Delete the row identified by a composite primary key stored in the row object.
+    void remove(const RowType& obj)
+    requires detail::HasPrimaryKey<TableType> && (TableType::PrimaryKeyCount > 1)
+    {
+        const std::string sql = "DELETE FROM " + std::string(TableType::TableName) + " WHERE "
+                                + TableType::primary_key_where_clause() + ";";
+        auto stmt = _db.prepare(sql);
+        TableType::bind_primary_key(stmt, obj, 1);
         stmt.exec();
     }
 
@@ -224,7 +224,7 @@ private:
             }(c), ...);
         }, typename TableType::ColumnsTuple{});
         return "UPDATE " + std::string(TableType::TableName) + " SET " + set_clause + " WHERE "
-               + std::string(TableType::pk_name) + " = ?;";
+             + TableType::primary_key_where_clause() + ";";
     }
 };
 } //namespace tewi

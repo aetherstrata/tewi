@@ -30,6 +30,22 @@ template <auto... Vs>
 constexpr auto firstOf = first_of<Vs...>::value;
 
 /**
+ * @brief Checks if @b any of the provided boolean template parameters are @c true.
+ * @tparam T Pack of boolean values to evaluate.
+ * @note Equivalent to a fold expression `(... || T)`.
+ */
+template <bool... T>
+constexpr bool anyOf = (... || T);
+
+/**
+ * @brief Checks if @b all the provided boolean template parameters are @b true.
+ * @tparam T Pack of boolean values to evaluate.
+ * @note Equivalent to a fold expression `(... && T)`.
+ */
+template <bool... T>
+constexpr bool allOf = (... && T);
+
+/**
  * @brief Primary template for member pointer decomposition.
  *
  * This template is intentionally left undefined. Only the partial
