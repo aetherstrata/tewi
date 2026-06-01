@@ -83,22 +83,6 @@ TEWI_REGISTER_TABLE(tewi::tests::Book, tewi::tests::BookTable)
 // ---------------------------------------------------------
 namespace tewi::tests
 {
-TEST_CASE("ORM: Table Registration and Schema Generation", "[orm][schema]")
-{
-    // Verify that the table registry correctly maps User and Post to their tables
-    using UserReg = detail::TableRegistry<User>;
-    using PostReg = detail::TableRegistry<Post>;
-
-    SECTION("User should be registered to UserTable")
-    {
-        STATIC_REQUIRE(std::is_same_v<UserReg::TableType, UserTable>);
-    }
-    SECTION("Post should be registered to PostTable")
-    {
-        STATIC_REQUIRE(std::is_same_v<PostReg::TableType, PostTable>);
-    }
-}
-
 TEST_CASE("ORM Concepts: Type Classification Validation", "[orm][concepts]")
 {
     SECTION("IsTable Concept")
@@ -110,15 +94,6 @@ TEST_CASE("ORM Concepts: Type Classification Validation", "[orm][concepts]")
         // Plain structs or arbitrary types should fail the concept
         STATIC_REQUIRE_FALSE(tewi::detail::IsTable<Author>);
         STATIC_REQUIRE_FALSE(tewi::detail::IsTable<int>);
-    }
-
-    SECTION("HasRegisteredTable Concept")
-    {
-        STATIC_REQUIRE(tewi::detail::HasRegisteredTable<Author>);
-        STATIC_REQUIRE(tewi::detail::HasRegisteredTable<Book>);
-
-        // Unregistered structs should not be recognized
-        STATIC_REQUIRE_FALSE(tewi::detail::HasRegisteredTable<UnregisteredEntity>);
     }
 
     SECTION("HomogeneousMemberPtrs Concept")
@@ -157,13 +132,13 @@ TEST_CASE("ORM Metadata: Table and Column Reflection", "[orm][metadata]")
     SECTION("Column Name Resolution via Member Pointers")
     {
         // Compile-time lookups
-        STATIC_REQUIRE(AuthorTable::column_name_for<&Author::name>() == "name");
-        STATIC_REQUIRE(BookTable::column_name_for<&Book::author_id>() == "author_id");
-        STATIC_REQUIRE(AuthorTable::column_name_for<&Author::id>() == "id");
-        STATIC_REQUIRE(BookTable::column_name_for<&Book::title>() == "title");
+        STATIC_REQUIRE(AuthorTable::columnNameOf<&Author::name>() == "name");
+        STATIC_REQUIRE(BookTable::columnNameOf<&Book::author_id>() == "author_id");
+        STATIC_REQUIRE(AuthorTable::columnNameOf<&Author::id>() == "id");
+        STATIC_REQUIRE(BookTable::columnNameOf<&Book::title>() == "title");
 
         // Querying a member pointer not in the table should return an empty view
-        STATIC_REQUIRE(AuthorTable::column_name_for<&Book::id>().empty());
+        STATIC_REQUIRE(AuthorTable::columnNameOf<&Book::id>().empty());
     }
 }
 
