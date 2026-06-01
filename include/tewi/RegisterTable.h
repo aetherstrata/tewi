@@ -18,7 +18,7 @@
  */
 #define TEWI_REGISTER_TABLE(RowType, TableAlias)                     \
 static_assert(!::tewi::detail::IsTable<RowType>,                     \
-              "ORM_REGISTER_TABLE: RowType must be a plain struct, " \
+              "TEWI_REGISTER_TABLE: RowType must be a plain struct, "\
               "not a Table<> descriptor.");                          \
 template <>                                                          \
 struct tewi::detail::TableRegistry<RowType>                          \
