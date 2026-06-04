@@ -17,6 +17,7 @@ export namespace tewi
 /// @tparam member  Pointer-to-member of the mapped C++ field.
 /// @tparam Cs      Zero or more constraint tags.
 template <FixedString name, auto member, typename... Cs>
+requires detail::ForeignKeyHasSameType<typename detail::member_ptr<decltype(member)>::FieldType, Cs...>
 struct Column
 {
 private:

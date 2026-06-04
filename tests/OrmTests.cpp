@@ -128,7 +128,7 @@ TEST_CASE("ORM: Schema Creation and Basic CRUD", "[orm][crud]")
 
 TEST_CASE("ORM: Advanced Queries and Filtering", "[orm][select]")
 {
-    auto raw = tewi::engine::InMemory();
+    auto raw = engine::InMemory();
     OrmDatabase db(raw);
     tewi::createTablesIfNotExist<UserTable>(raw);
 
@@ -156,7 +156,7 @@ TEST_CASE("ORM: Advanced Queries and Filtering", "[orm][select]")
 
 TEST_CASE("ORM: Foreign Key Joins", "[orm][join]")
 {
-    auto raw = tewi::engine::InMemory();
+    auto raw = engine::InMemory();
     OrmDatabase db(raw);
     tewi::createTablesIfNotExist<UserTable, PostTable>(raw);
 

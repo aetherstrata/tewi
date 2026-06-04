@@ -1,6 +1,7 @@
 export module tewi:fk_helpers;
 
 import :contraints;
+import :member_traits;
 
 import std;
 
@@ -141,4 +142,30 @@ consteval auto resolve_fk_reverse()
     };
 }
 
+template <typename T, typename... Cs>
+consteval bool fk_has_same_type()
+{
+    // No constraints, or no foreign keys at all: return true
+    if constexpr (sizeof...(Cs) == 0 || !anyOf<isForeignKey<Cs>...>)
+    {
+        return true;
+    }
+    else
+    {
+        auto check = []<typename C>() consteval
+        {
+            if constexpr (isForeignKey<C>)
+            {
+                using MP = std::remove_cv_t<decltype(C::Member)>;
+                using Field = member_ptr<MP>::FieldType;
+                return std::is_same_v<Field, T>;
+            }
+            else return false;
+        };
+        return anyOf<check.template operator()<Cs>()...>;
+    }
+}
+
+template <typename T, typename... Cs>
+concept ForeignKeyHasSameType = fk_has_same_type<T, Cs...>();
 } // namespace tewi::detail

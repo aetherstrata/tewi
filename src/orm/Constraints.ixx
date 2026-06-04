@@ -127,7 +127,7 @@ public:
  * @p ReferencedMember within @p ReferencedTable.
  *
  * @tparam ReferencedTable  The C++ struct/class representing the referenced table.
- * @tparam ReferencedMember A member pointer (e.g. @c &OtherTable::id) identifying
+ * @tparam referencedMember A member pointer (e.g. @c &OtherTable::id) identifying
  *                          the specific column in the referenced table.
  *
  * @par Example
@@ -138,14 +138,14 @@ public:
  * using UserFK = ForeignKey<UserTable, &User::id>;
  * @endcode
  */
-template <typename ReferencedTable, auto ReferencedMember>
+template <typename ReferencedTable, auto referencedMember>
 struct ForeignKey
 {
     /// The referenced table type.
     using Table = ReferencedTable;
 
     /// Member pointer identifying the referenced column within @c Table.
-    static constexpr auto Member = ReferencedMember;
+    static constexpr auto Member = referencedMember;
 };
 /// @}
 } // namespace tewi

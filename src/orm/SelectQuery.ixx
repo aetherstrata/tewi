@@ -80,8 +80,8 @@ public:
         using LT = TableType;
         using RT = TargetTable;
 
-        constexpr bool fwd = detail::HasFkTo<LT, RT>; // LT.col → RT
-        constexpr bool rev = detail::HasFkTo<RT, LT>; // RT.col → LT
+        constexpr bool fwd = detail::HasFkTo<LT, RT>; // LT.col -> RT
+        constexpr bool rev = detail::HasFkTo<RT, LT>; // RT.col -> LT
 
         static_assert(fwd || rev, "Join<T>: no ForeignKey<> found between these two tables. "
                                   "Use JoinOn<&L::col, &R::col>() for an explicit condition.");

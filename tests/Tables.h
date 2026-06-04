@@ -84,8 +84,7 @@ using OrderItemTable = Table<"order_items", OrderItem,
         Column<"item_number", &OrderItem::item_number, PrimaryKey<false>>,
         Column<"description", &OrderItem::description>,
         Column<"quantity", &OrderItem::quantity>
-    >
->;
+    >>;
 
 using K1Col = Column<"key1", &ThreeKeyComposite::key1, PrimaryKey<false>>;
 using K2Col = Column<"key2", &ThreeKeyComposite::key2, PrimaryKey<false>>;
