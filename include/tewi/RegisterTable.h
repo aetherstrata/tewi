@@ -24,7 +24,7 @@ static_assert(!::tewi::IsTable<RowType>,                                        
 static_assert(::tewi::IsTable<TableAlias>,                                          \
               "TEWI_REGISTER_TABLE: " #TableAlias " must be a Table<> descriptor.");\
 template <>                                                                         \
-struct tewi::detail::TableRegistry<RowType>                                         \
+struct tewi::TableRegistry<RowType>                                                 \
 {                                                                                   \
     using TableType = TableAlias;                                                   \
 };

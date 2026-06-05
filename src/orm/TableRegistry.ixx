@@ -6,7 +6,7 @@ import std;
 //  TableRegistry  - maps Row types to their Table descriptors
 // ============================================================================
 
-export namespace tewi::detail
+export namespace tewi
 {
 /**
  * @brief Compile-time registry that maps a row type to its table descriptor type
@@ -47,4 +47,4 @@ struct TableRegistry
  */
 template <typename RowType>
 concept HasRegisteredTable = !std::is_void_v<typename TableRegistry<RowType>::TableType>;
-} // namespace tewi::detail
+} // namespace tewi

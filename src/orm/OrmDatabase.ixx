@@ -28,10 +28,10 @@ public:
     // ----------------------------------------------------------------
     /// Returns a SelectQuery for the registered table of RowType.
     template <typename RowType>
-        requires detail::HasRegisteredTable<RowType>
+        requires HasRegisteredTable<RowType>
     [[nodiscard]] auto select() const
     {
-        using TT = detail::TableRegistry<RowType>::TableType;
+        using TT = TableRegistry<RowType>::TableType;
         return SelectQuery<TT>(_db);
     }
 
@@ -53,9 +53,9 @@ public:
     [[nodiscard]] auto select() const
     {
         using ObjType = detail::projection_object_t<MemberPtrs...>;
-        static_assert(detail::HasRegisteredTable<ObjType>,
+        static_assert(HasRegisteredTable<ObjType>,
                       "Select<MPs...>: row type not registered.");
-        using TT = detail::TableRegistry<ObjType>::TableType;
+        using TT = TableRegistry<ObjType>::TableType;
         return ColumnProjectionQuery<TT, MemberPtrs...>(_db);
     }
 
@@ -63,10 +63,10 @@ public:
     //  Count<RowType>()
     // ----------------------------------------------------------------
     template <typename RowType>
-        requires detail::HasRegisteredTable<RowType>
+        requires HasRegisteredTable<RowType>
     [[nodiscard]] i64 count() const
     {
-        using TT = detail::TableRegistry<RowType>::TableType;
+        using TT = TableRegistry<RowType>::TableType;
         return Repository<TT>(_db).count();
     }
 
@@ -90,11 +90,11 @@ public:
         using LObj = detail::member_ptr<decltype(LeftMember)>::ObjectType;
         using RObj = detail::member_ptr<decltype(RightMember)>::ObjectType;
 
-        static_assert(detail::HasRegisteredTable<LObj> && detail::HasRegisteredTable<RObj>,
+        static_assert(HasRegisteredTable<LObj> && HasRegisteredTable<RObj>,
                       "JoinOn<>: both row types must be registered with ORM_REGISTER_TABLE.");
 
-        using LT = detail::TableRegistry<LObj>::TableType;
-        using RT = detail::TableRegistry<RObj>::TableType;
+        using LT = TableRegistry<LObj>::TableType;
+        using RT = TableRegistry<RObj>::TableType;
 
         constexpr std::string_view lc = LT::template columnNameOf<LeftMember>();
         constexpr std::string_view rc = RT::template columnNameOf<RightMember>();

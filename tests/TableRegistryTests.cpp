@@ -9,8 +9,8 @@ namespace tewi::tests
 TEST_CASE("Table Registry", "[orm][table][registry]")
 {
     // Verify that the table registry correctly maps registered tables
-    using SimpleReg = detail::TableRegistry<SimpleEntity>;
-    using NonReg = detail::TableRegistry<UnregisteredEntity>;
+    using SimpleReg = TableRegistry<SimpleEntity>;
+    using NonReg = TableRegistry<UnregisteredEntity>;
 
     SECTION("User shall be registered to UserTable")
     {
@@ -18,7 +18,7 @@ TEST_CASE("Table Registry", "[orm][table][registry]")
     }
     SECTION("HasRegisteredTable shall be true for User")
     {
-        STATIC_REQUIRE(detail::HasRegisteredTable<User>);
+        STATIC_REQUIRE(HasRegisteredTable<User>);
     }
     SECTION("Post shall not be registered to PostTable")
     {
@@ -26,7 +26,7 @@ TEST_CASE("Table Registry", "[orm][table][registry]")
     }
     SECTION("HasRegisteredTable shall be false for Post")
     {
-        STATIC_REQUIRE_FALSE(detail::HasRegisteredTable<UnregisteredEntity>);
+        STATIC_REQUIRE_FALSE(HasRegisteredTable<UnregisteredEntity>);
     }
 }
 } // namespace tewi::tests
