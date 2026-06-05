@@ -11,11 +11,11 @@ TEST_CASE("Table Metadata", "[orm][table][schema]")
 {
     SECTION("A table shall expose its name in the database")
     {
-        STATIC_REQUIRE(UserTable::TableName == "users");
+        STATIC_REQUIRE(UserTable::tableName == "users");
     }
     SECTION("A table shall expose its column count")
     {
-        STATIC_REQUIRE(UserTable::ColumnsCount == 3);
+        STATIC_REQUIRE(UserTable::columnsCount == 3);
     }
     SECTION("A table shall expose a tuple of its column types")
     {
@@ -32,9 +32,9 @@ TEST_CASE("Table Metadata", "[orm][table][schema]")
     }
     SECTION("The table shall be able to associate a member pointer to its column name")
     {
-        STATIC_REQUIRE(UserTable::ColumnOf<&User::id>::ColumnName == "id");
-        STATIC_REQUIRE(UserTable::ColumnOf<&User::username>::ColumnName == "username");
-        STATIC_REQUIRE(UserTable::ColumnOf<&User::age>::ColumnName == "age");
+        STATIC_REQUIRE(UserTable::ColumnOf<&User::id>::columnName == "id");
+        STATIC_REQUIRE(UserTable::ColumnOf<&User::username>::columnName == "username");
+        STATIC_REQUIRE(UserTable::ColumnOf<&User::age>::columnName == "age");
     }
     SECTION("Querying a member pointer not in the table shall return void")
     {
@@ -42,7 +42,7 @@ TEST_CASE("Table Metadata", "[orm][table][schema]")
     }
     SECTION("The table shall expose its index count")
     {
-        STATIC_REQUIRE(UserTable::IndexCount == 1);
+        STATIC_REQUIRE(UserTable::indexCount == 1);
     }
     SECTION("The table shall expose a tuple of its index types")
     {

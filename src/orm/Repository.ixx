@@ -32,7 +32,7 @@ public:
     {
         _db.exec(TableType::create_table_sql(if_not_exists));
         // Indexes are separate statements - SQLite requires this.
-        if constexpr (TableType::IndexCount > 0)
+        if constexpr (TableType::indexCount > 0)
         {
             _db.exec(TableType::create_indexes_sql(if_not_exists));
         }
@@ -41,7 +41,7 @@ public:
     void dropTable(bool if_exists = true)
     {
         _db.exec("DROP TABLE " + std::string(if_exists ? "IF EXISTS " : "")
-                 + std::string(TableType::TableName) + ";");
+                 + std::string(TableType::tableName) + ";");
     }
 
     // ----------------------------------------------------------------
@@ -89,10 +89,10 @@ public:
         {
             ([&]<typename Col>(Col)
             {
-                if constexpr (!Col::IsPrimaryKey)
+                if constexpr (!Col::isPrimaryKey)
                 {
                     using FT  = Col::FieldType;
-                    const auto& val = obj.*(Col::MemberPtr);
+                    const auto& val = obj.*(Col::member);
                     SqliteTypeAdapter<FT>::bind(stmt, idx++, val);
                 }
             }(cols), ...);
@@ -122,10 +122,10 @@ public:
 
     /// Delete the row with the given primary key value.
     template <typename PKType>
-    requires detail::HasPrimaryKey<TableType> && SqliteAdaptable<PKType> && (TableType::PrimaryKeyCount == 1)
+    requires detail::HasPrimaryKey<TableType> && SqliteAdaptable<PKType> && (TableType::primaryKeyCount == 1)
     void remove(const PKType& pk_value)
     {
-        const std::string sql = "DELETE FROM " + std::string(TableType::TableName) + " WHERE "
+        const std::string sql = "DELETE FROM " + std::string(TableType::tableName) + " WHERE "
                                 + TableType::primary_key_where_clause() + ";";
         auto stmt = _db.prepare(sql);
         SqliteTypeAdapter<PKType>::bind(stmt, 1, pk_value);
@@ -139,7 +139,7 @@ public:
           && detail::allOf<SqliteAdaptable<PKValues>...>
     void remove(PKValues&&... pk_values)
     {
-        const std::string sql = "DELETE FROM " + std::string(TableType::TableName) + " WHERE "
+        const std::string sql = "DELETE FROM " + std::string(TableType::tableName) + " WHERE "
                                 + TableType::primary_key_where_clause() + ";";
         auto stmt = _db.prepare(sql);
         i32 idx = 1;
@@ -149,9 +149,9 @@ public:
 
     /// Delete the row identified by a composite primary key stored in the row object.
     void remove(const RowType& obj)
-    requires detail::HasPrimaryKey<TableType> && (TableType::PrimaryKeyCount > 1)
+    requires detail::HasPrimaryKey<TableType> && (TableType::primaryKeyCount > 1)
     {
-        const std::string sql = "DELETE FROM " + std::string(TableType::TableName) + " WHERE "
+        const std::string sql = "DELETE FROM " + std::string(TableType::tableName) + " WHERE "
                                 + TableType::primary_key_where_clause() + ";";
         auto stmt = _db.prepare(sql);
         TableType::bind_primary_key(stmt, obj, 1);
@@ -162,7 +162,7 @@ public:
     void removeWhere(const detail::QueryState& qs)
     {
         const std::string sql =
-            "DELETE FROM " + std::string(TableType::TableName) + qs.where_sql() + ";";
+            "DELETE FROM " + std::string(TableType::tableName) + qs.where_sql() + ";";
         auto stmt = _db.prepare(sql);
         qs.bind_where(stmt);
         stmt.exec();
@@ -174,7 +174,7 @@ public:
 
     [[nodiscard]] i64 count()
     {
-        const std::string sql = "SELECT COUNT(*) FROM " + std::string(TableType::TableName) + ";";
+        const std::string sql = "SELECT COUNT(*) FROM " + std::string(TableType::tableName) + ";";
         auto stmt             = _db.prepare(sql);
         stmt.step();
         return stmt.columnLong(0);
@@ -183,7 +183,7 @@ public:
     [[nodiscard]] i64 countWhere(const detail::QueryState& qs)
     {
         const std::string sql =
-            "SELECT COUNT(*) FROM " + std::string(TableType::TableName) + qs.where_sql() + ";";
+            "SELECT COUNT(*) FROM " + std::string(TableType::tableName) + qs.where_sql() + ";";
         auto stmt = _db.prepare(sql);
         qs.bind_where(stmt);
         stmt.step();
@@ -212,12 +212,12 @@ private:
                     columns += ", ";
                     queryState   += ", ";
                 }
-                columns  += std::string(Col::ColumnName);
+                columns  += std::string(Col::columnName);
                 queryState    += "?";
                 first  = false;
             }(c), ...);
         }, typename TableType::ColumnsTuple{});
-        return "INSERT INTO " + std::string(TableType::TableName) + " (" + columns + ") VALUES (" + queryState
+        return "INSERT INTO " + std::string(TableType::tableName) + " (" + columns + ") VALUES (" + queryState
                + ");";
     }
 
@@ -229,15 +229,15 @@ private:
         {
             ([&]<typename Col>(Col)
             {
-                if constexpr (!Col::IsPrimaryKey)
+                if constexpr (!Col::isPrimaryKey)
                 {
                     if (!first) set_clause += ", ";
-                    set_clause += std::string(Col::ColumnName) + " = ?";
+                    set_clause += std::string(Col::columnName) + " = ?";
                     first       = false;
                 }
             }(c), ...);
         }, typename TableType::ColumnsTuple{});
-        return "UPDATE " + std::string(TableType::TableName) + " SET " + set_clause + " WHERE "
+        return "UPDATE " + std::string(TableType::tableName) + " SET " + set_clause + " WHERE "
              + TableType::primary_key_where_clause() + ";";
     }
 };

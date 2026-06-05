@@ -33,7 +33,7 @@ public:
     template <auto MP, typename V>
     [[nodiscard]] ColumnProjectionQuery where(V&& value) &&
     {
-        constexpr std::string_view col = TableType::template ColumnOf<MP>::ColumnName;
+        constexpr std::string_view col = TableType::template ColumnOf<MP>::columnName;
         static_assert(!col.empty(), "Where<MP>: member not mapped.");
         return push_where(std::string(col), "=", std::forward<V>(value));
     }
@@ -188,7 +188,7 @@ private:
     [[nodiscard]] std::string build_sql() const
     {
         return "SELECT " + std::string(_state.distinct ? "DISTINCT " : "") + column_list()
-               + " FROM " + std::string(TableType::TableName) + _state.where_sql()
+               + " FROM " + std::string(TableType::tableName) + _state.where_sql()
                + _state.order_sql() + _state.limit_sql() + ";";
     }
 
@@ -202,7 +202,7 @@ private:
             constexpr std::string_view col = TableType::template columnNameOf<MP>();
             static_assert(!col.empty(), "Select<MP>: member not mapped.");
             if (!first) sql += ", ";
-            sql   += std::string(TableType::TableName) + "." + std::string(col);
+            sql   += std::string(TableType::tableName) + "." + std::string(col);
             first  = false;
         }.template operator()<MemberPtrs>(), ...);
         return sql;
@@ -301,9 +301,9 @@ private:
     [[nodiscard]] std::string build_sql() const
     {
         return "SELECT " + col_list<LTable, LMPs...>() + ", " + col_list<RTable, RMPs...>()
-               + " FROM " + std::string(LTable::TableName) + " INNER JOIN "
-               + std::string(RTable::TableName) + " ON " + std::string(LTable::TableName) + "."
-               + std::string(_left_col) + " = " + std::string(RTable::TableName) + "."
+               + " FROM " + std::string(LTable::tableName) + " INNER JOIN "
+               + std::string(RTable::tableName) + " ON " + std::string(LTable::tableName) + "."
+               + std::string(_left_col) + " = " + std::string(RTable::tableName) + "."
                + std::string(_right_col) + _state.where_sql() + _state.order_sql()
                + _state.limit_sql() + ";";
     }
@@ -318,7 +318,7 @@ private:
             constexpr std::string_view col = T::template columnNameOf<MP>();
             static_assert(!col.empty());
             if (!first) sql += ", ";
-            sql   += std::string(T::TableName) + "." + std::string(col);
+            sql   += std::string(T::tableName) + "." + std::string(col);
             first  = false;
         }.template operator()<MPs>(), ...);
         return sql;

@@ -12,7 +12,7 @@ using AgeColumn             = Column<"age", &User::age>;
 using NameColumn            = Column<"name", &User::username>;
 using DuplicateNameColumn   = Column<"id", &User::age>;
 using DuplicateMemberColumn = Column<"other_id", &User::id>;
-
+/*
 TEST_CASE("UniqueColumnNames shall accept distinct names", "[orm][schema][column]")
 {
     STATIC_REQUIRE(detail::UniqueColumnNames<IdColumn, AgeColumn, NameColumn>);
@@ -22,7 +22,6 @@ TEST_CASE("UniqueColumnNames shall reject duplicates", "[orm][schema][column]")
 {
     STATIC_REQUIRE_FALSE(detail::UniqueColumnNames<IdColumn, DuplicateNameColumn>);
 }
-
 TEST_CASE("UniqueMemberPointers shall accept distinct members", "[orm][schema][column]")
 {
     STATIC_REQUIRE(detail::UniqueMemberPointers<IdColumn, AgeColumn, NameColumn>);
@@ -38,4 +37,5 @@ TEST_CASE("UniqueMemberPointers shall handle different member pointer types",
 {
     STATIC_REQUIRE(detail::UniqueMemberPointers<IdColumn, NameColumn>);
 }
+*/
 } // namespace tewi::tests

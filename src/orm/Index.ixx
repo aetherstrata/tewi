@@ -28,13 +28,13 @@ struct Index
         {
             sql += "IF NOT EXISTS ";
         }
-        sql += std::string(IndexName) + " ON " + std::string(TableType::TableName) + " (";
+        sql += std::string(IndexName) + " ON " + std::string(TableType::tableName) + " (";
 
         bool first = true;
         // Fold over MemberPtrs, resolving each to its column name at compile time.
         ([&]<auto MP>()
         {
-            constexpr std::string_view col = TableType::template ColumnOf<MP>::ColumnName;
+            constexpr std::string_view col = TableType::template ColumnOf<MP>::columnName;
             static_assert(!col.empty(),
                           "Index: member pointer not mapped to any column in this table.");
             if (!first) sql += ", ";

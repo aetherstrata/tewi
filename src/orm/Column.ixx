@@ -14,39 +14,39 @@ export namespace tewi
 {
 /// Describes a single table column.
 /// @tparam name    Compile-time column name string.
-/// @tparam member  Pointer-to-member of the mapped C++ field.
+/// @tparam MP  Pointer-to-member of the mapped C++ field.
 /// @tparam Cs      Zero or more constraint tags.
-template <FixedString name, auto member, typename... Cs>
-requires detail::ForeignKeyHasSameType<typename detail::member_ptr<decltype(member)>::FieldType, Cs...>
-    && std::is_default_constructible_v<typename detail::member_ptr<decltype(member)>::FieldType>
+template <FixedString name, auto MP, typename... Cs>
+requires detail::ForeignKeyHasSameType<typename detail::member_ptr<decltype(MP)>::FieldType, Cs...>
+    && std::is_default_constructible_v<typename detail::member_ptr<decltype(MP)>::FieldType>
 struct Column
 {
 private:
     static constexpr auto name_storage           = name;
-    using mp_traits   = detail::member_ptr<decltype(member)>;
+    using mp_traits   = detail::member_ptr<decltype(MP)>;
 public:
     using ObjectType  = mp_traits::ObjectType;
     using FieldType   = mp_traits::FieldType;
     using Constraints = std::tuple<Cs...>;
 
-    static constexpr auto MemberPtr = member;
+    static constexpr auto member = MP;
 
-    static constexpr std::string_view ColumnName = name_storage.view();
+    static constexpr std::string_view columnName = name_storage.view();
 
-    static constexpr bool IsPrimaryKey = detail::anyOf<detail::isPrimaryKey<Cs>...>;
+    static constexpr bool isPrimaryKey = detail::anyOf<detail::isPrimaryKey<Cs>...>;
 
-    static constexpr bool IsAutoincrement = detail::anyOf<detail::isAutoincrementPK<Cs>...>;
+    static constexpr bool isAutoincrement = detail::anyOf<detail::isAutoincrementPK<Cs>...>;
 
-    static constexpr bool HasForeignKey = detail::anyOf<detail::isForeignKey<Cs>...>;
+    static constexpr bool hasForeignKey = detail::anyOf<detail::isForeignKey<Cs>...>;
 
     // ------------------------------------------------------------------
     // DDL fragment for this column (without trailing comma).
     // ------------------------------------------------------------------
     [[nodiscard]] static std::string ddl()
     {
-        std::string sql = std::string(ColumnName) + " "
+        std::string sql = std::string(columnName) + " "
                           + std::string(SqliteTypeAdapter<FieldType>::affinity)
-                          + detail::constraint_ddl<Cs...>(ColumnName);
+                          + detail::constraint_ddl<Cs...>(columnName);
 
         // Append REFERENCES clause for each ForeignKey constraint.
         ([&]()
@@ -54,8 +54,8 @@ public:
             if constexpr (detail::is_foreign_key<Cs>::value)
             {
                 using RT  = Cs::Table;
-                sql      += " REFERENCES " + std::string(RT::TableName) + "("
-                       + std::string(RT::template ColumnOf<Cs::Member>::ColumnName) + ")";
+                sql      += " REFERENCES " + std::string(RT::tableName) + "("
+                       + std::string(RT::template ColumnOf<Cs::member>::columnName) + ")";
             }
         }(), ...);
         return sql;

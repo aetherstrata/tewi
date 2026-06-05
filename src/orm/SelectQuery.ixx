@@ -35,7 +35,7 @@ public:
     template <auto MemberPtr, typename V>
     [[nodiscard]] SelectQuery where(V&& value) &&
     {
-        constexpr std::string_view col = TableType::template ColumnOf<MemberPtr>::ColumnName;
+        constexpr std::string_view col = TableType::template ColumnOf<MemberPtr>::columnName;
         static_assert(!col.empty(), "Where<MP>: member not mapped to a column in this table.");
         return push_where(std::string(col), "=", std::forward<V>(value));
     }
@@ -44,7 +44,7 @@ public:
     template <auto MemberPtr, typename V>
     [[nodiscard]] SelectQuery whereOp(std::string_view op, V&& value) &&
     {
-        constexpr std::string_view col = TableType::template ColumnOf<MemberPtr>::ColumnName;
+        constexpr std::string_view col = TableType::template ColumnOf<MemberPtr>::columnName;
         static_assert(!col.empty(), "WhereOp<MP>: member not mapped to a column.");
         return push_where(std::string(col), std::string(op), std::forward<V>(value));
     }
@@ -108,7 +108,7 @@ public:
     template <auto MemberPtr>
     [[nodiscard]] SelectQuery orderBy(Order order = Order::ASC) &&
     {
-        constexpr std::string_view col = TableType::template ColumnOf<MemberPtr>::ColumnName;
+        constexpr std::string_view col = TableType::template ColumnOf<MemberPtr>::columnName;
         static_assert(!col.empty(), "OrderBy<MP>: member not mapped to a column.");
 
         _state.order_clauses.emplace_back(std::string(col), order);
@@ -241,11 +241,11 @@ private:
         {
             ([&]<typename Col>(Col)
             {
-                if constexpr (std::is_same_v<decltype(Col::MemberPtr), Field Obj::*>)
+                if constexpr (std::is_same_v<decltype(Col::member), Field Obj::*>)
                 {
-                    if (Col::MemberPtr == mp)
+                    if (Col::member == mp)
                     {
-                        result = std::string(Col::ColumnName);
+                        result = std::string(Col::columnName);
                     }
                 }
             }(cols_v), ...);

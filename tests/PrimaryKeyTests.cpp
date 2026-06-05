@@ -11,26 +11,26 @@ TEST_CASE("Primary keys: count", "[orm][schema][composite-pk]")
 {
     SECTION("A simple table shall expose a count of one (1) primary key column")
     {
-        STATIC_REQUIRE(SimpleEntityTable::PrimaryKeyCount == 1);
+        STATIC_REQUIRE(SimpleEntityTable::primaryKeyCount == 1);
     }
     SECTION("A table shall expose the count of primary key columns in the composite key")
     {
-        STATIC_REQUIRE(OrderItemTable::PrimaryKeyCount == 2);
-        STATIC_REQUIRE(ThreeKeyCompositeTable::PrimaryKeyCount == 3);
+        STATIC_REQUIRE(OrderItemTable::primaryKeyCount == 2);
+        STATIC_REQUIRE(ThreeKeyCompositeTable::primaryKeyCount == 3);
     }
 }
 
 TEST_CASE("Primary keys: column flag", "[orm][schema][composite-pk]")
 {
-    SECTION("Each composite keys shall have the IsPrimaryKey flag set")
+    SECTION("Each composite keys shall have the isPrimaryKey flag set")
     {
-        STATIC_REQUIRE(OrderItemTable::ColumnOf<&OrderItem::order_id>::IsPrimaryKey);
-        STATIC_REQUIRE(OrderItemTable::ColumnOf<&OrderItem::item_number>::IsPrimaryKey);
+        STATIC_REQUIRE(OrderItemTable::ColumnOf<&OrderItem::order_id>::isPrimaryKey);
+        STATIC_REQUIRE(OrderItemTable::ColumnOf<&OrderItem::item_number>::isPrimaryKey);
     }
-    SECTION("Non-key columns shall not have the IsPrimaryKey flag set")
+    SECTION("Non-key columns shall not have the isPrimaryKey flag set")
     {
-        STATIC_REQUIRE_FALSE(OrderItemTable::ColumnOf<&OrderItem::description>::IsPrimaryKey);
-        STATIC_REQUIRE_FALSE(OrderItemTable::ColumnOf<&OrderItem::quantity>::IsPrimaryKey);
+        STATIC_REQUIRE_FALSE(OrderItemTable::ColumnOf<&OrderItem::description>::isPrimaryKey);
+        STATIC_REQUIRE_FALSE(OrderItemTable::ColumnOf<&OrderItem::quantity>::isPrimaryKey);
     }
 }
 
@@ -66,13 +66,13 @@ TEST_CASE("Primary keys: auto-increment constraint", "[orm][schema][composite-pk
 {
     SECTION("A table with an auto-increment primary key shall have only one (1) primary key")
     {
-        STATIC_REQUIRE(SimpleEntityTable::HasAutoIncrementPrimaryKey);
-        STATIC_REQUIRE(SimpleEntityTable::PrimaryKeyCount == 1);
+        STATIC_REQUIRE(SimpleEntityTable::hasAutoIncrementPk);
+        STATIC_REQUIRE(SimpleEntityTable::primaryKeyCount == 1);
     }
     SECTION("A table with a composite key shall have no auto-increment keys")
     {
-        STATIC_REQUIRE_FALSE(OrderItemTable::HasAutoIncrementPrimaryKey);
-        STATIC_REQUIRE_FALSE(ThreeKeyCompositeTable::HasAutoIncrementPrimaryKey);
+        STATIC_REQUIRE_FALSE(OrderItemTable::hasAutoIncrementPk);
+        STATIC_REQUIRE_FALSE(ThreeKeyCompositeTable::hasAutoIncrementPk);
     }
 }
 

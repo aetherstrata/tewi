@@ -1,4 +1,4 @@
-export module tewi:pk_helpers;
+module tewi:pk_helpers;
 
 import :contraints;
 import :member_traits;
@@ -54,7 +54,7 @@ private:
     using tail_type = primary_key_tuple<Rest...>::type;
 
 public:
-    using type = std::conditional_t<First::IsPrimaryKey,
+    using type = std::conditional_t<First::isPrimaryKey,
                                     typename tuple_prepend<First, tail_type>::type,
                                     tail_type>;
 };
@@ -75,7 +75,7 @@ private:
     using tail_type = primary_key_type<Rest...>::type;
 
 public:
-    using type = std::conditional_t<First::IsPrimaryKey,
+    using type = std::conditional_t<First::isPrimaryKey,
                                     typename tuple_prepend<typename First::FieldType, tail_type>::type,
                                     tail_type>;
 };
@@ -93,23 +93,23 @@ template <typename... Cs>
     ([&]()
     {
         using C = Cs;
-        if constexpr (requires { C::Suffix; })
+        if constexpr (requires { C::suffix; })
         {
-            sql += C::Suffix;
+            sql += C::suffix;
         }
-        if constexpr (requires { C::Expression; })
+        if constexpr (requires { C::expression; })
         {
-            sql += " CHECK(" + C::Expression + ")";
+            sql += " CHECK(" + C::expression + ")";
         }
-        if constexpr (requires { C::Pattern; })
+        if constexpr (requires { C::pattern; })
         {
-            sql += " CHECK(regexp('" + C::Pattern + "', " + col_name + "))";
+            sql += " CHECK(regexp('" + C::pattern + "', " + col_name + "))";
         }
     }(), ...);
     return sql;
 }
 
 // Requires the table to have one primary key
-export template <typename TableType>
-concept HasPrimaryKey = TableType::PrimaryKeyCount > 0;
+template <typename TableType>
+concept HasPrimaryKey = TableType::primaryKeyCount > 0;
 } // namespace tewi::detail

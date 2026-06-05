@@ -1,4 +1,4 @@
-export module tewi:fk_helpers;
+module tewi:fk_helpers;
 
 import :contraints;
 import :member_traits;
@@ -32,17 +32,17 @@ struct IsFkTo<ForeignKey<TargetTable, MP>, TargetTable> : std::true_type
 
 // Does a Column carry a ForeignKey pointing to TargetTable?
 template <typename Col, typename TargetTable>
-struct ColHasFkTo
+struct ColHasFkTo final
 {
 private:
     template <typename... Cs>
     static consteval bool check(std::tuple<Cs...>*)
     {
-        return (IsFkTo<Cs, TargetTable>::value || ...);
+        return anyOf<IsFkTo<Cs, TargetTable>::value...>;
     }
 
 public:
-    static constexpr bool value = ColHasFkTo::check(static_cast<Col::constraint_pack*>(nullptr));
+    static constexpr bool value = ColHasFkTo::check(static_cast<Col::Constraints*>(nullptr));
 };
 
 // -----------------------------------------------------------------------
@@ -52,56 +52,37 @@ public:
 //  ForeignKey<TargetTable, …> constraint.  Returns the Column type,
 //  or void if none is found.
 // -----------------------------------------------------------------------
-template <typename TableType, typename TargetTable, typename ColTuple>
-struct FindFkColumn
+template <typename TargetTable, typename... Cols>
+struct FindFkTo
 {
     using type = void;
 };
 
 // Base case: empty tuple → not found
-template <typename TableType, typename TargetTable>
-struct FindFkColumn<TableType, TargetTable, std::tuple<>>
+template <typename TargetTable>
+struct FindFkTo<TargetTable>
 {
     using type = void;
 };
 
 // Recursive case: check head, recurse on tail
-template <typename TableType, typename TargetTable, typename Head, typename... Tail>
-struct FindFkColumn<TableType, TargetTable, std::tuple<Head, Tail...>>
+template <typename TargetTable, typename First, typename... Rest>
+struct FindFkTo<TargetTable, First, Rest...>
 {
-private:
-    // Does Head carry a ForeignKey pointing to TargetTable?
-    static constexpr bool head_matches = []<typename... Cs>(std::tuple<Cs...>*)
-    {
-        return ([]<typename C>()
-        {
-            if constexpr (is_foreign_key<C>::value)
-            {
-                return std::is_same_v<typename C::Table, TargetTable>;
-            }
-            return false;
-        }.template operator()<Cs>() || ...);
-    }(static_cast<Head::Constraints*>(nullptr));
-
-public:
     using type = std::conditional_t<
-        head_matches, Head,
-        typename FindFkColumn<TableType, TargetTable, std::tuple<Tail...>>::type>;
+        ColHasFkTo<First, TargetTable>::value, First,
+        typename FindFkTo<TargetTable, Rest...>::type>;
 };
 
-// Convenience alias
-export template <typename TableType, typename TargetTable>
-using FkColumn = FindFkColumn<TableType, TargetTable, typename TableType::ColumnsTuple>::type;
-
 // Concept: TableType has a FK column pointing to TargetTable
-export template <typename TableType, typename TargetTable>
-concept HasFkTo = !std::is_void_v<FkColumn<TableType, TargetTable>>;
+template <typename TableType, typename TargetTable>
+concept HasFkTo = !std::is_void_v<typename TableType::template FkTo<TargetTable>>;
 
 // -----------------------------------------------------------------------
 //  Given a FK Column type, extract the referenced column name.
 //  Walks the Column's constraints to find the ForeignKey<> tag.
 // -----------------------------------------------------------------------
-export template <typename FkCol, typename TargetTable>
+template <typename FkCol, typename TargetTable>
 consteval std::string_view fk_referenced_col_name()
 {
     std::string_view result{};
@@ -111,7 +92,7 @@ consteval std::string_view fk_referenced_col_name()
         {
             if constexpr (IsFkTo<C, TargetTable>::value)
             {
-                result = TargetTable::template ColumnOf<C::Member>::ColumnName;
+                result = TargetTable::template ColumnOf<C::member>::columnName;
             }
         }.template operator()<Cs>(), ...);
     }(static_cast<FkCol::Constraints*>(nullptr));
@@ -123,9 +104,9 @@ template <typename LT, typename RT>
 requires HasFkTo<LT, RT>
 consteval auto resolve_fk_forward()
 {
-    using FK = FkColumn<LT, RT>;
+    using FK = LT::template FkTo<RT>;
     return std::pair<std::string_view, std::string_view>{
-        FK::ColumnName,
+        FK::columnName,
         fk_referenced_col_name<FK, RT>()
     };
 }
@@ -135,10 +116,10 @@ template <typename LT, typename RT>
 requires HasFkTo<RT, LT>
 consteval auto resolve_fk_reverse()
 {
-    using FK = FkColumn<RT, LT>;
+    using FK = RT::template FkTo<LT>;
     return std::pair<std::string_view, std::string_view>{
         fk_referenced_col_name<FK, LT>(),
-        FK::ColumnName
+        FK::columnName
     };
 }
 
@@ -156,7 +137,7 @@ consteval bool fk_has_same_type()
         {
             if constexpr (isForeignKey<C>)
             {
-                using MP = std::remove_cv_t<decltype(C::Member)>;
+                using MP = std::remove_cv_t<decltype(C::member)>;
                 using Field = member_ptr<MP>::FieldType;
                 return std::is_same_v<Field, T>;
             }

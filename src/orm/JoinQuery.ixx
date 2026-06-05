@@ -61,19 +61,19 @@ public:
     [[nodiscard]] JoinQuery where(V&& v) &&
     {
         // MP must belong to LTable or RTable; we try both.
-        constexpr std::string_view lc = LTable::template ColumnOf<MP>::ColumnName;
-        constexpr std::string_view rc = RTable::template ColumnOf<MP>::ColumnName;
+        constexpr std::string_view lc = LTable::template ColumnOf<MP>::columnName;
+        constexpr std::string_view rc = RTable::template ColumnOf<MP>::columnName;
 
         static_assert(!lc.empty() || !rc.empty(), "Where<MP>: member not in joined tables.");
 
         std::string col;
         if constexpr (!lc.empty())
         {
-            col = std::string(LTable::TableName) + "." + std::string(lc);
+            col = std::string(LTable::tableName) + "." + std::string(lc);
         }
         else if constexpr (!rc.empty())
         {
-            col = std::string(RTable::TableName) + "." + std::string(rc);
+            col = std::string(RTable::tableName) + "." + std::string(rc);
         }
 
         return push_where(col, "=", std::forward<V>(v));
@@ -90,11 +90,11 @@ public:
         std::string col;
         if constexpr (!lc.empty())
         {
-            col = std::string(LTable::TableName) + "." + std::string(lc);
+            col = std::string(LTable::tableName) + "." + std::string(lc);
         }
         else
         {
-            col = std::string(RTable::TableName) + "." + std::string(rc);
+            col = std::string(RTable::tableName) + "." + std::string(rc);
         }
 
         _state.order_clauses.emplace_back(col, order);
@@ -120,7 +120,7 @@ public:
         while (stmt.step())
         {
             out.emplace_back(LTable::hydrate(stmt, 0),
-                             RTable::hydrate(stmt, static_cast<i32>(LTable::ColumnsCount)));
+                             RTable::hydrate(stmt, static_cast<i32>(LTable::columnsCount)));
         }
         return out;
     }
@@ -133,11 +133,11 @@ private:
 
     [[nodiscard]] std::string build_sql() const
     {
-        return "SELECT " + LTable::column_list(LTable::TableName) + ", "
-               + RTable::column_list(RTable::TableName) + " FROM "
-               + std::string(LTable::TableName) + " INNER JOIN " + std::string(RTable::TableName)
-               + " ON " + std::string(LTable::TableName) + "." + std::string(_left_col) + " = "
-               + std::string(RTable::TableName) + "." + std::string(_right_col)
+        return "SELECT " + LTable::column_list(LTable::tableName) + ", "
+               + RTable::column_list(RTable::tableName) + " FROM "
+               + std::string(LTable::tableName) + " INNER JOIN " + std::string(RTable::tableName)
+               + " ON " + std::string(LTable::tableName) + "." + std::string(_left_col) + " = "
+               + std::string(RTable::tableName) + "." + std::string(_right_col)
                + _state.where_sql() + _state.order_sql() + _state.limit_sql() + ";";
     }
 

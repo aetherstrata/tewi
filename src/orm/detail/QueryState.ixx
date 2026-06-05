@@ -1,5 +1,6 @@
-export module tewi:query_state;
+module tewi:query_state;
 
+import :order;
 import :sqlite_statement;
 
 import std;
@@ -8,11 +9,7 @@ import std;
 //  QueryState  - WHERE / ORDER BY / LIMIT accumulated state
 // ============================================================================
 
-namespace tewi
-{
-export enum class Order { ASC, DESC };
-
-namespace detail
+namespace tewi::detail
 {
 struct WherePredicate
 {
@@ -81,5 +78,4 @@ struct QueryState
         }
     }
 };
-} // namespace detail
-} // namespace tewi
+} // namespace tewi::detail

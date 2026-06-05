@@ -36,17 +36,23 @@ public:
     template <auto MP>
     using ColumnOf = detail::mp_column<MP, Cols...>::type;
 
-    static constexpr std::string_view TableName = name_storage.view();
+    template <typename OherTable>
+    using FkTo = detail::FindFkTo<OherTable, Cols...>::type;
 
-    static constexpr usize ColumnsCount    = sizeof...(Cols);
-    static constexpr usize IndexCount      = sizeof...(Idxs);
-    static constexpr usize PrimaryKeyCount = ((Cols::IsPrimaryKey ? usize{1} : usize{0}) + ...);
+    template <typename OherTable>
+    static constexpr bool hasFkTo = !std::is_void<FkTo<OherTable>>::value;
 
-    static constexpr bool HasAutoIncrementPrimaryKey = detail::anyOf<Cols::IsAutoincrement...>;
+    static constexpr std::string_view tableName = name_storage.view();
 
-    static_assert(PrimaryKeyCount > 0, "A table must have at least one PrimaryKey.");
+    static constexpr usize columnsCount    = sizeof...(Cols);
+    static constexpr usize indexCount      = sizeof...(Idxs);
+    static constexpr usize primaryKeyCount = ((Cols::isPrimaryKey ? usize{1} : usize{0}) + ...);
 
-    static_assert(!(HasAutoIncrementPrimaryKey && PrimaryKeyCount != 1),
+    static constexpr bool hasAutoIncrementPk = detail::anyOf<Cols::isAutoincrement...>;
+
+    static_assert(primaryKeyCount > 0, "A table must have at least one PrimaryKey.");
+
+    static_assert(!(hasAutoIncrementPk && primaryKeyCount != 1),
                   "AUTOINCREMENT primary keys are only allowed when the table has exactly one primary key column.");
 
     // -----------------------------------------------------------------------
@@ -56,7 +62,7 @@ public:
     {
         std::string sql = "CREATE TABLE ";
         if (ifNotExists) sql += "IF NOT EXISTS ";
-        sql        += std::string(TableName) + " (";
+        sql        += std::string(tableName) + " (";
         bool first  = true;
         ([&]() constexpr
         {
@@ -96,7 +102,7 @@ public:
                 sql += prefix;
                 sql += ".";
             }
-            sql   += Cols::ColumnName;
+            sql   += Cols::columnName;
             first  = false;
         }(), ...);
         return sql;
@@ -112,7 +118,7 @@ public:
         ([&]()
         {
             using FT  = Cols::FieldType;
-            auto& fld = obj.*(Cols::MemberPtr);
+            auto& fld = obj.*(Cols::member);
             fld = SqliteTypeAdapter<FT>::read(stmt, idx++);
         }(), ...);
         return obj;
@@ -124,10 +130,10 @@ public:
         bool first = true;
         ([&]()
         {
-            if constexpr (Cols::IsPrimaryKey)
+            if constexpr (Cols::isPrimaryKey)
             {
                 if (!first) sql += " AND ";
-                sql += Cols::ColumnName;
+                sql += Cols::columnName;
                 sql += " = ?";
                 first = false;
             }
@@ -140,10 +146,10 @@ public:
         i32 idx = bindOffset;
         ([&]()
         {
-            if constexpr (Cols::IsPrimaryKey)
+            if constexpr (Cols::isPrimaryKey)
             {
                 using FT = Cols::FieldType;
-                const auto& fld = obj.*(Cols::MemberPtr);
+                const auto& fld = obj.*(Cols::member);
                 SqliteTypeAdapter<FT>::bind(stmt, idx++, fld);
             }
         }(), ...);
@@ -160,7 +166,7 @@ public:
         ([&]()
         {
             using FT  = Cols::FieldType;
-            const auto& fld = obj.*(Cols::MemberPtr);
+            const auto& fld = obj.*(Cols::member);
             SqliteTypeAdapter<FT>::bind(stmt, idx++, fld);
         }(), ...);
         return idx;
@@ -174,11 +180,11 @@ private:
         bool first      = true;
         ([&]() constexpr
         {
-            if constexpr (Cols::IsPrimaryKey)
+            if constexpr (Cols::isPrimaryKey)
             {
                 if (!first) sql += ", ";
-                sql += Cols::ColumnName;
-                if constexpr (Cols::IsAutoincrement)
+                sql += Cols::columnName;
+                if constexpr (Cols::isAutoincrement)
                 {
                     sql += " AUTOINCREMENT";
                 }

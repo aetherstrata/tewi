@@ -126,12 +126,12 @@ private:
         // Single-column DISTINCT form
         if (_state.distinct_col.has_value())
             return "SELECT DISTINCT " + *_state.distinct_col + " FROM "
-                   + std::string(TableType::TableName) + _state.where_sql() + _state.order_sql()
+                   + std::string(TableType::tableName) + _state.where_sql() + _state.order_sql()
                    + _state.limit_sql() + ";";
 
         // Full-row DISTINCT (or plain SELECT)
-        return "SELECT " + distinct_kw + TableType::column_list(TableType::TableName) + " FROM "
-               + std::string(TableType::TableName) + _state.where_sql() + _state.order_sql()
+        return "SELECT " + distinct_kw + TableType::column_list(TableType::tableName) + " FROM "
+               + std::string(TableType::tableName) + _state.where_sql() + _state.order_sql()
                + _state.limit_sql() + ";";
     }
 };

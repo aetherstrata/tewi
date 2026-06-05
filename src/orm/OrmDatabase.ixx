@@ -132,7 +132,7 @@ void createTablesIfNotExist(engine::SqliteConnection& db)
     ([&]<typename T>()
     {
         db.exec(T::create_table_sql(true));
-        if constexpr (T::IndexCount > 0)
+        if constexpr (T::indexCount > 0)
         {
             db.exec(T::create_indexes_sql(true));
         }

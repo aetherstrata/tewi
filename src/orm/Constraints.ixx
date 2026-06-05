@@ -26,7 +26,7 @@ export namespace tewi
  * Appends either `PRIMARY KEY AUTOINCREMENT` or `PRIMARY KEY` to the
  * column's DDL definition depending on the @p autoIncrement parameter.
  *
- * @tparam autoIncrement When @c true (default), appends @c AUTOINCREMENT
+ * @tparam AutoIncrement When @c true (default), appends @c AUTOINCREMENT
  *                       to the DDL suffix. Set to @c false for tables
  *                       that require a plain primary key without
  *                       auto-increment behaviour.
@@ -34,11 +34,11 @@ export namespace tewi
  * @note @c AUTOINCREMENT is a SQLite-specific keyword. Omitting it still
  *       guarantees uniqueness, but does not prevent reuse of deleted rowids.
  */
-template <bool autoIncrement = true>
+template <bool AutoIncrement = true>
 struct PrimaryKey
 {
     /// Whether `AUTOINCREMENT` is appended to the DDL clause.
-    static constexpr bool AutoIncrement = autoIncrement;
+    static constexpr bool autoIncrement = AutoIncrement;
 };
 
 /**
@@ -50,7 +50,7 @@ struct PrimaryKey
 struct NotNull
 {
     /// The DDL suffix appended to the column definition.
-    static constexpr std::string_view Suffix = " NOT NULL";
+    static constexpr std::string_view suffix = " NOT NULL";
 };
 
 /**
@@ -62,7 +62,7 @@ struct NotNull
 struct Unique
 {
     /// The DDL suffix appended to the column definition.
-    static constexpr std::string_view Suffix = " UNIQUE";
+    static constexpr std::string_view suffix = " UNIQUE";
 };
 
 /**
@@ -88,7 +88,7 @@ private:
     static constexpr auto expr_storage           = expr;
 public:
     /// The SQL expression embedded inside the @c CHECK(...) clause.
-    static constexpr std::string_view Expression = expr_storage.view();
+    static constexpr std::string_view expression = expr_storage.view();
 };
 
 /**
@@ -116,7 +116,7 @@ private:
     static constexpr auto expr_storage        = expr;
 public:
     /// The regex pattern passed as the first argument to @c regexp(...).
-    static constexpr std::string_view Pattern = expr_storage.view();
+    static constexpr std::string_view pattern = expr_storage.view();
 };
 
 /**
@@ -145,7 +145,7 @@ struct ForeignKey
     using Table = ReferencedTable;
 
     /// Member pointer identifying the referenced column within @c Table.
-    static constexpr auto Member = referencedMember;
+    static constexpr auto member = referencedMember;
 };
 /// @}
 } // namespace tewi

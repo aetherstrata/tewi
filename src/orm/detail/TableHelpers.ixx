@@ -1,4 +1,4 @@
-export module tewi:table_helpers;
+module tewi:table_helpers;
 
 import std;
 
@@ -9,11 +9,11 @@ consteval bool unique_column_names()
 {
     if constexpr (sizeof...(Rest) > 0)
     {
-        return ((First::ColumnName != Rest::ColumnName) && ...) && unique_column_names<Rest...>();
+        return ((First::columnName != Rest::columnName) && ...) && unique_column_names<Rest...>();
     }
     else return true;
 }
 
-export template<typename... Cols>
+template<typename... Cols>
 concept UniqueColumnNames = unique_column_names<Cols...>();
 }

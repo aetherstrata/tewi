@@ -1,4 +1,4 @@
-export module tewi:member_traits;
+module tewi:member_traits;
 
 import std;
 // ============================================================================
@@ -102,9 +102,9 @@ struct mp_column<MP, Col, Rest...>
 {
     static consteval bool match()
     {
-        if constexpr (requires { Col::MemberPtr == MP; })
+        if constexpr (requires { Col::member == MP; })
         {
-            return Col::MemberPtr == MP;
+            return Col::member == MP;
         }
         else return false;
     }
@@ -122,7 +122,7 @@ template <auto MP>
 using ObjectOf = member_ptr<std::remove_cv_t<decltype(MP)>>::ObjectType;
 
 // All MPs share the same object type - works for 1 or more MPs.
-export template <auto... MPs>
+template <auto... MPs>
 concept HomogeneousMemberPtrs =
     sizeof...(MPs) > 0 &&
     (std::is_same_v<ObjectOf<MPs>,
@@ -144,9 +144,9 @@ consteval bool unique_member_ptrs()
     {
         return (([]<typename Other>()
         {
-            if constexpr (requires{ First::MemberPtr == Other::MemberPtr; })
+            if constexpr (requires{ First::member == Other::member; })
             {
-                return First::MemberPtr != Other::MemberPtr;
+                return First::member != Other::member;
             }
             else
             {
@@ -156,6 +156,6 @@ consteval bool unique_member_ptrs()
     }
 }
 
-export template<typename... Cols>
+template<typename... Cols>
 concept UniqueMemberPointers = unique_member_ptrs<Cols...>();
 } // namespace tewi::detail
