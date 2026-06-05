@@ -1,3 +1,14 @@
+include(FetchContent)
+
+# Catch2
+FetchContent_Declare(
+  Catch2
+  GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+  GIT_TAG        v3.15.0
+)
+FetchContent_MakeAvailable(Catch2)
+list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
+
 add_executable(${PROJECT_NAME}_tests
         ColumnSchemaTests.cpp
         PrimaryKeyTests.cpp
