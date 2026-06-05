@@ -1,8 +1,8 @@
 export module tewi:query_range;
 
-import :constraint_helpers;
 import :sqlite_connection;
 import :query_state;
+import :table;
 
 import std;
 
@@ -13,7 +13,7 @@ namespace tewi
 {
 /// A lazy input range that executes the compiled SQL only on first iteration.
 template <typename TableType>
-requires detail::IsTable<TableType>
+requires IsTable<TableType>
 class QueryRange
 {
 public:

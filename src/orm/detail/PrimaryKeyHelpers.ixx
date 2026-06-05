@@ -1,4 +1,4 @@
-export module tewi:constraint_helpers;
+export module tewi:pk_helpers;
 
 import :contraints;
 import :member_traits;
@@ -112,61 +112,4 @@ template <typename... Cs>
 // Requires the table to have one primary key
 export template <typename TableType>
 concept HasPrimaryKey = TableType::PrimaryKeyCount > 0;
-
-template <typename First, typename... Rest>
-consteval bool unique_column_names()
-{
-    if constexpr (sizeof...(Rest) == 0)
-    {
-        return true;
-    }
-    else
-    {
-        return ((First::ColumnName != Rest::ColumnName) && ...) && unique_column_names<Rest...>();
-    }
-}
-
-template<typename First, typename... Rest>
-consteval bool unique_member_ptrs()
-{
-    if constexpr (sizeof...(Rest) == 0)
-    {
-        return true;
-    }
-    else
-    {
-        return (([]<typename Other>()
-        {
-            if constexpr (requires{ First::MemberPtr == Other::MemberPtr; })
-            {
-                return First::MemberPtr != Other::MemberPtr;
-            }
-            else
-            {
-                return true;
-            }
-        }.template operator()<Rest>()) && ...) && unique_member_ptrs<Rest...>();
-    }
-}
-
-export template<typename... Cols>
-concept UniqueColumnNames = unique_column_names<Cols...>();
-
-export template<typename... Cols>
-concept UniqueMemberPointers = unique_member_ptrs<Cols...>();
-
-// ============================================================================
-// IsTable concept
-// ============================================================================
-export template <typename T>
-concept IsTable = requires {
-    T::TableName;
-    T::ColumnsCount;
-    T::PrimaryKeyCount;
-    typename T::RowType;
-    typename T::KeyType;
-    typename T::ColumnsTuple;
-    typename T::IndicesTuple;
-    typename T::KeyTuple;
-};
 } // namespace tewi::detail

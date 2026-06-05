@@ -62,10 +62,11 @@ target_sources(${PROJECT_NAME} PUBLIC
         src/orm/TableRegistry.ixx
         src/orm/TypeAdapter.ixx
         src/orm/detail/BaseTypeAdapters.ixx
-        src/orm/detail/ConstraintHelpers.ixx
+        src/orm/detail/PrimaryKeyHelpers.ixx
         src/orm/detail/ForeignKeyHelpers.ixx
         src/orm/detail/MemberTraits.ixx
         src/orm/detail/QueryState.ixx
+        src/orm/detail/TableHelpers.ixx
 )
 
 target_link_libraries(${PROJECT_NAME} PUBLIC SQLite3::SQLite3)

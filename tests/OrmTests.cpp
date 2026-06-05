@@ -17,12 +17,12 @@ TEST_CASE("ORM Concepts: Type Classification Validation", "[orm][concepts]")
     SECTION("IsTable Concept")
     {
         // Valid tables should satisfy the concept
-        STATIC_REQUIRE(tewi::detail::IsTable<UserTable>);
-        STATIC_REQUIRE(tewi::detail::IsTable<PostTable>);
+        STATIC_REQUIRE(tewi::IsTable<UserTable>);
+        STATIC_REQUIRE(tewi::IsTable<PostTable>);
 
         // Plain structs or arbitrary types should fail the concept
-        STATIC_REQUIRE_FALSE(tewi::detail::IsTable<User>);
-        STATIC_REQUIRE_FALSE(tewi::detail::IsTable<int>);
+        STATIC_REQUIRE_FALSE(tewi::IsTable<User>);
+        STATIC_REQUIRE_FALSE(tewi::IsTable<int>);
     }
 
     SECTION("HomogeneousMemberPtrs Concept")

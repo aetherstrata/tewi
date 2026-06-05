@@ -132,4 +132,30 @@ concept HomogeneousMemberPtrs =
 template <auto... MPs>
 requires HomogeneousMemberPtrs<MPs...>
 using projection_object_t = ObjectOf<firstOf<MPs...>>;
+
+template<typename First, typename... Rest>
+consteval bool unique_member_ptrs()
+{
+    if constexpr (sizeof...(Rest) == 0)
+    {
+        return true;
+    }
+    else
+    {
+        return (([]<typename Other>()
+        {
+            if constexpr (requires{ First::MemberPtr == Other::MemberPtr; })
+            {
+                return First::MemberPtr != Other::MemberPtr;
+            }
+            else
+            {
+                return true;
+            }
+        }.template operator()<Rest>()) && ...) && unique_member_ptrs<Rest...>();
+    }
+}
+
+export template<typename... Cols>
+concept UniqueMemberPointers = unique_member_ptrs<Cols...>();
 } // namespace tewi::detail

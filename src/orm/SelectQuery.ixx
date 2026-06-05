@@ -1,13 +1,12 @@
 export module tewi:select;
 
-import :constraint_helpers;
 import :fk_helpers;
 import :query_range;
 import :sqlite_connection;
 import :type_adapter;
+import :join;
 
 import std;
-import :join;
 
 namespace tewi
 {
@@ -18,7 +17,7 @@ namespace tewi
 /// Fluent query builder.  All methods take *this by value and return a new
 /// builder, so queries can be composed without mutation.
 export template <typename TableType>
-requires detail::IsTable<TableType>
+requires IsTable<TableType>
 class SelectQuery
 {
 
@@ -74,7 +73,7 @@ public:
     //  (ambiguous - use JoinOn<> explicitly in that case).
     // ----------------------------------------------------------------
     template <typename TargetTable>
-    requires detail::IsTable<TargetTable>
+    requires IsTable<TargetTable>
     [[nodiscard]] auto join() &&
     {
         using LT = TableType;

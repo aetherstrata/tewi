@@ -1,6 +1,5 @@
 export module tewi:repository;
 
-import :constraint_helpers;
 import :select;
 import :sqlite_connection;
 import :sqlite_statement;
@@ -15,7 +14,7 @@ namespace tewi
 {
 /// Full CRUD operations for a single table type.
 export template <typename TableType>
-requires detail::IsTable<TableType>
+requires IsTable<TableType>
 class Repository
 {
 public:

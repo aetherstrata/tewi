@@ -1,7 +1,7 @@
 export module tewi:column;
 
-import :constraint_helpers;
 import :fk_helpers;
+import :pk_helpers;
 import :type_adapter;
 
 import std;
@@ -18,6 +18,7 @@ export namespace tewi
 /// @tparam Cs      Zero or more constraint tags.
 template <FixedString name, auto member, typename... Cs>
 requires detail::ForeignKeyHasSameType<typename detail::member_ptr<decltype(member)>::FieldType, Cs...>
+    && std::is_default_constructible_v<typename detail::member_ptr<decltype(member)>::FieldType>
 struct Column
 {
 private:

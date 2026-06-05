@@ -1,8 +1,9 @@
 export module tewi:table;
 
 import :column;
-import :constraint_helpers;
 import :index;
+import :table_helpers;
+import :pk_helpers;
 import :type_adapter;
 
 import std;
@@ -11,25 +12,26 @@ import std;
 //  Table<Name, Row, Columns...>
 // ============================================================================
 
-export namespace tewi
+namespace tewi
 {
 
 /// Maps a C++ struct T to a SQLite table.
-template <FixedString Name, typename T, typename ColPack, typename IdxPack = Indexes<>>
+export template <FixedString name, typename T, typename ColPack, typename IdxPack = Indexes<>>
 struct Table;
 
-template <FixedString Name, typename T, typename... Cols, typename... Idxs>
+template <FixedString name, typename T, typename... Cols, typename... Idxs>
 requires detail::UniqueColumnNames<Cols...> && detail::UniqueMemberPointers<Cols...>
-struct Table<Name, T, Columns<Cols...>, Indexes<Idxs...>>
+struct Table<name, T, Columns<Cols...>, Indexes<Idxs...>>
 {
 private:
-    static constexpr auto name_storage = Name;
+    static constexpr auto name_storage = name;
 public:
-    using RowType      = T;
+    using RowType = T;
+    using KeyType = detail::PrimaryKeyType<Cols...>;
+
     using ColumnsTuple = std::tuple<Cols...>;
     using IndicesTuple = std::tuple<Idxs...>;
     using KeyTuple     = detail::PrimaryKeyColumns<Cols...>;
-    using KeyType      = detail::PrimaryKeyType<Cols...>;
 
     template <auto MP>
     using ColumnOf = detail::mp_column<MP, Cols...>::type;
@@ -187,5 +189,17 @@ private:
         return sql;
     }
 };
+
+namespace detail
+{
+template <typename T>
+struct is_table : std::false_type {};
+
+template <FixedString name, typename T, typename ColPack, typename IdxPack>
+struct is_table<Table<name, T, ColPack, IdxPack>> : std::true_type {};
+} // namespace detail
+
+export template <typename T>
+concept IsTable = detail::is_table<T>::value;
 
 } // namespace tewi

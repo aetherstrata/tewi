@@ -8,7 +8,7 @@ namespace tewi::tests
 {
 TEST_CASE("Table Registry", "[orm][table][registry]")
 {
-    // Verify that the table registry correctly maps User and Post
+    // Verify that the table registry correctly maps registered tables
     using SimpleReg = detail::TableRegistry<SimpleEntity>;
     using NonReg = detail::TableRegistry<UnregisteredEntity>;
 

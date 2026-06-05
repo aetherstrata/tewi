@@ -39,7 +39,7 @@ public:
     //  Select<TableType>() - explicit Table type (no registration needed)
     // ----------------------------------------------------------------
     template <typename TableType>
-        requires detail::IsTable<TableType>
+        requires IsTable<TableType>
     [[nodiscard]] SelectQuery<TableType> select() const
     {
         return SelectQuery<TableType>(_db);
@@ -74,7 +74,7 @@ public:
     //  Repo<TableType>()  - full CRUD repository
     // ----------------------------------------------------------------
     template <typename TableType>
-        requires detail::IsTable<TableType>
+        requires IsTable<TableType>
     [[nodiscard]] Repository<TableType> repo()
     {
         return Repository<TableType>(_db);
@@ -126,7 +126,7 @@ private:
 /// Execute CREATE TABLE IF NOT EXISTS for every supplied Table type.
 /// Typically called once at application startup, after migrations.
 export template <typename... Tables>
-requires(detail::IsTable<Tables> && ...)
+requires(IsTable<Tables> && ...)
 void createTablesIfNotExist(engine::SqliteConnection& db)
 {
     ([&]<typename T>()

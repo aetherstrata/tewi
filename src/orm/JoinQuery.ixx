@@ -1,6 +1,6 @@
 export module tewi:join;
 
-import :constraint_helpers;
+import :table;
 import :type_adapter;
 import :query_state;
 
@@ -38,7 +38,7 @@ struct JoinOn
 
 /// Produces std::pair<LRow, RRow> results from an INNER JOIN.
 template <typename LTable, typename RTable>
-requires detail::IsTable<LTable> && detail::IsTable<RTable>
+requires IsTable<LTable> && IsTable<RTable>
 class JoinQuery
 {
 public:

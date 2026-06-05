@@ -1,11 +1,11 @@
 export module tewi:projection;
 
-import :constraint_helpers;
-import :fk_helpers;
 import :member_traits;
+import :fk_helpers;
 import :query_state;
 import :registry;
 import :sqlite_connection;
+import :table;
 import :type_adapter;
 
 import std;
@@ -16,7 +16,7 @@ import std;
 export namespace tewi
 {
 template <typename TableType, auto... MemberPtrs>
-requires detail::IsTable<TableType> && detail::HomogeneousMemberPtrs<MemberPtrs...>
+requires IsTable<TableType> && detail::HomogeneousMemberPtrs<MemberPtrs...>
 class ColumnProjectionQuery
 {
 public:
@@ -81,7 +81,7 @@ public:
     //  Returns a JoinProjectionQuery (see §3).
     // ----------------------------------------------------------------
     template <typename TargetTable>
-        requires detail::IsTable<TargetTable>
+        requires IsTable<TargetTable>
     [[nodiscard]] auto join() &&; // defined after JoinProjectionQuery
 
     // ----------------------------------------------------------------
@@ -349,9 +349,9 @@ private:
 
 // Auto-FK join - all columns of TargetTable
 template <typename TableType, auto... MemberPtrs> // on ColumnProjectionQuery
-requires detail::IsTable<TableType> && detail::HomogeneousMemberPtrs<MemberPtrs...>
+requires IsTable<TableType> && detail::HomogeneousMemberPtrs<MemberPtrs...>
 template <typename TargetTable>
-requires detail::IsTable<TargetTable>
+requires IsTable<TargetTable>
 [[nodiscard]] auto ColumnProjectionQuery<TableType, MemberPtrs...>::join() &&
 {
     // Same FK detection logic as SelectQuery::Join<> (§3 of the auto-join design)
@@ -375,7 +375,7 @@ requires detail::IsTable<TargetTable>
 
 // Column-projected join: .Join<&Leaderboard::time, &Leaderboard::score>()
 template <typename TableType, auto... MemberPtrs>
-    requires detail::IsTable<TableType> && detail::HomogeneousMemberPtrs<MemberPtrs...>
+    requires IsTable<TableType> && detail::HomogeneousMemberPtrs<MemberPtrs...>
 template <auto... RightMPs>
     requires detail::HomogeneousMemberPtrs<RightMPs...>
 [[nodiscard]] auto ColumnProjectionQuery<TableType, MemberPtrs...>::join() &&

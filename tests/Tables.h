@@ -1,15 +1,13 @@
 #ifndef TEWI_TABLES_H
 #define TEWI_TABLES_H
 
-#include "tewi/RegisterTable.h"
-
 import tewi;
 import std;
 
 namespace tewi::tests
 {
 // ---------------------------------------------------------
-// 1. Define C++ Structs
+//  Define plain structs
 // ---------------------------------------------------------
 struct User
 {
@@ -104,6 +102,8 @@ using SimpleEntityTable = Table<"simple_entities", SimpleEntity,
         Column<"value", &SimpleEntity::value>
     >>;
 } // namespace tewi::tests
+
+#include "tewi/RegisterTable.h"
 
 TEWI_REGISTER_TABLE(tewi::tests::User, tewi::tests::UserTable)
 TEWI_REGISTER_TABLE(tewi::tests::OrderItem, tewi::tests::OrderItemTable)
