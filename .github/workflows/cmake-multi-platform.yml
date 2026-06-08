@@ -10,9 +10,6 @@ on:
 jobs:
   build:
     runs-on: ${{ matrix.os }}
-    env:
-      CC: ${{ runner.os == 'Linux' && 'gcc-15' || '' }}
-      CXX: ${{ runner.os == 'Linux' && 'g++-15' || '' }}
 
     strategy:
       # Set fail-fast to false to ensure that feedback is delivered for all matrix combinations.
@@ -31,6 +28,8 @@ jobs:
             configure_preset: linux-release
             build_preset: linux-release-build
             test_preset: linux-release-test
+            cc: gcc-15
+            cxx: g++-15
 
     steps:
     - uses: actions/checkout@v4
@@ -42,6 +41,9 @@ jobs:
         sudo apt install -y gcc-15 g++-15
 
     - name: CMake Configure
+      env:
+        CC: ${{ matrix.cc }}
+        CXX: ${{ matrix.cxx }}
       run: cmake --preset ${{ matrix.configure_preset }}
 
     - name: CMake Build
