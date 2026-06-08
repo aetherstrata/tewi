@@ -36,7 +36,7 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Install GCC 15
-      if: runner.os == 'Linux'
+      if: ${{ runner.os == 'Linux' }}
       run: |
         sudo apt update
         sudo apt install -y gcc-15 g++-15
