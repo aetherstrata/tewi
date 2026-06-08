@@ -19,7 +19,7 @@ jobs:
       matrix:
         include:
           # Windows preset (Visual Studio 18 2026 generator)
-          - os: windows-latest
+          - os: windows-2025-vs2026
             configure_preset: windows-release
             build_preset: windows-release-build
             test_preset: windows-release-test
