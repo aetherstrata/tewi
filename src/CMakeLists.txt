@@ -10,7 +10,7 @@ target_sources(${PROJECT_NAME} PRIVATE
 
 target_sources(${PROJECT_NAME} PUBLIC
         FILE_SET CXX_MODULES FILES
-        module.ixx
+        tewi.ixx
         ast/AstRenderer.ixx
         ast/AstSpec.ixx
         common/FixedString.ixx

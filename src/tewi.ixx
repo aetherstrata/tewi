@@ -6,8 +6,6 @@ export import :sqlite_statement;
 export import :sqlite_transaction;
 export import :sqlite_migration;
 
-export import :fixed_string;
-
 export import :order;
 export import :compare;
 

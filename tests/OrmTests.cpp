@@ -73,9 +73,8 @@ TEST_CASE("ORM: Schema Creation and Basic CRUD", "[orm][crud]")
     // Setup in-memory SQLite DB
     engine::SqliteConnection raw_db(":memory:");
     OrmDatabase db(raw_db);
-
     // Bootstrap Tables
-    tewi::createTablesIfNotExist<UserTable, PostTable>(raw_db);
+    db.createTable<UserTable, PostTable>();
 
     auto users = db.repo<UserTable>();
 
@@ -126,7 +125,7 @@ TEST_CASE("ORM: Advanced Queries and Filtering", "[orm][select]")
 
     auto raw = engine::InMemory();
     OrmDatabase db(raw);
-    tewi::createTablesIfNotExist<UserTable>(raw);
+    db.createTable<UserTable>();
 
     auto users = db.repo<UserTable>();
     users.insert(toInsert);
@@ -149,7 +148,7 @@ TEST_CASE("ORM: Foreign Key Joins", "[orm][join]")
 {
     auto raw = engine::InMemory();
     OrmDatabase db(raw);
-    tewi::createTablesIfNotExist<UserTable, PostTable>(raw);
+    db.createTable<UserTable, PostTable>();
 
     i64 id = db.repo<UserTable>().insert({0, "Writer1", 35});
 

@@ -94,8 +94,9 @@ TEST_CASE("Primary keys: columns tuple", "[orm][schema][composite-pk]")
 TEST_CASE("ORM Hydration: Populate structs from composite key results", "[orm][runtime][composite-pk]")
 {
     auto raw = engine::InMemory();
-    createTablesIfNotExist<OrderItemTable>(raw);
     OrmDatabase db(raw);
+    db.createTable<OrderItemTable>();
+
     auto user_groups = db.repo<OrderItemTable>();
 
     user_groups.insert({1, 10, "first", 1});
@@ -135,8 +136,9 @@ TEST_CASE("ORM Hydration: Populate structs from composite key results", "[orm][r
 TEST_CASE("ORM Binding: Bind composite key structs to statements", "[orm][runtime][composite-pk]")
 {
     auto raw = engine::InMemory();
-    createTablesIfNotExist<OrderItemTable>(raw);
     OrmDatabase db(raw);
+    db.createTable<OrderItemTable>();
+
     auto user_groups = db.repo<OrderItemTable>();
 
     SECTION("Bind and insert OrderItem with composite key")
@@ -181,8 +183,8 @@ TEST_CASE("ORM Binding: Bind composite key structs to statements", "[orm][runtim
 TEST_CASE("ORM Database: Full CRUD with composite keys", "[orm][runtime][composite-pk]")
 {
     auto raw = engine::InMemory();
-    createTablesIfNotExist<OrderItemTable>(raw);
     OrmDatabase db(raw);
+    db.createTable<OrderItemTable>();
     auto order_items = db.repo<OrderItemTable>();
 
     SECTION("Insert order items with composite key")
@@ -244,8 +246,9 @@ TEST_CASE("ORM Database: Full CRUD with composite keys", "[orm][runtime][composi
 TEST_CASE("ORM Three-Column Composite Keys", "[orm][runtime][composite-pk]")
 {
     auto raw = engine::InMemory();
-    createTablesIfNotExist<ThreeKeyCompositeTable>(raw);
     OrmDatabase db(raw);
+    db.createTable<ThreeKeyCompositeTable>();
+
     auto resources = db.repo<ThreeKeyCompositeTable>();
 
     SECTION("Insert and query by three-column key")

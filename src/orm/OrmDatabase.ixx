@@ -61,20 +61,6 @@ public:
     }
 
     // ----------------------------------------------------------------
-    // joinOn<&L::col, &R::col>() - explicit JOIN entry point
-    // ----------------------------------------------------------------
-    template <auto LeftMp, auto RightMp, ast::JoinKind Kind = ast::JoinKind::Inner>
-    [[nodiscard]] auto joinOn() const
-    {
-        using LObj = detail::ObjectOf<LeftMp>;
-        static_assert(HasRegisteredTable<LObj>,
-                      "joinOn<LMp,RMp>: left row type must be registered.");
-
-        return detail::make_basic_query<typename TableRegistry<LObj>::TableType>(_db)
-            .template joinOn<LeftMp, RightMp, Kind>();
-    }
-
-    // ----------------------------------------------------------------
     // repo<TableType>() - full CRUD repository
     // ----------------------------------------------------------------
     template <ITable TableType>
@@ -100,21 +86,17 @@ public:
 
     [[nodiscard]] engine::SqliteConnection& rawAccess() noexcept { return _db; }
 
+    template <ITable... Tables>
+    void createTable(bool ifNotExists = true)
+    {
+        ([&]()
+        {
+            _db.exec(Tables::create_table_sql(ifNotExists));
+            if constexpr (Tables::indexCount > 0) _db.exec(Tables::create_indexes_sql(ifNotExists));
+        }(), ...);
+    }
+
 private:
     engine::SqliteConnection& _db;
 };
-
-// -----------------------------------------------------------------------
-// §18  DDL bootstrap helper  (unchanged: DDL is schema-level, not query)
-// -----------------------------------------------------------------------
-export template <ITable... Tables>
-void createTablesIfNotExist(engine::SqliteConnection& db)
-{
-    ([&]()
-    {
-        db.exec(Tables::create_table_sql(true));
-        if constexpr (Tables::indexCount > 0) db.exec(Tables::create_indexes_sql(true));
-    }(), ...);
-}
-
 } // namespace tewi

@@ -1,4 +1,4 @@
-export module tewi:fixed_string;
+module tewi:fixed_string;
 
 import :number_types;
 
@@ -6,7 +6,7 @@ import :number_types;
 // FixedString - compile-time string NTTP
 // ============================================================================
 
-export namespace tewi
+namespace tewi
 {
 /**
  * @struct FixedString
