@@ -1,21 +1,25 @@
+// ============================================================================
+// OrmDatabase.ixx  -  tewi:orm_database
+//
+// Pure entry-point façade.  No SQL strings live here: every read-side
+// operation delegates to BasicQuery.  DDL helpers still emit strings
+// because CREATE TABLE / CREATE INDEX are schema-level, not query-level.
+// ============================================================================
 export module tewi:orm_database;
 
+import :basic_query;
+import :row_hydrator;
+import :ast_spec;
+import :registry;
 import :member_traits;
-import :join;
-import :projection;
 import :repository;
 import :sqlite_connection;
-import :select;
+import :table;
 
 import std;
 
-// ============================================================================
-//  §17  OrmDatabase  - ORM-aware façade over SqliteDatabase
-// ============================================================================
 namespace tewi
 {
-/// A thin non-owning façade that adds compile-time ORM entry-points on top of
-/// an existing SqliteDatabase.  The underlying database must outlive this object.
 export class OrmDatabase
 {
 public:
@@ -24,118 +28,93 @@ public:
     {}
 
     // ----------------------------------------------------------------
-    //  Select<RowType>()  - requires ORM_REGISTER_TABLE
+    // select<Row>() - registered row type -> SelectQuery equivalent
     // ----------------------------------------------------------------
-    /// Returns a SelectQuery for the registered table of RowType.
-    template <typename RowType>
-        requires HasRegisteredTable<RowType>
+    template <HasRegisteredTable Row>
     [[nodiscard]] auto select() const
     {
-        using TT = TableRegistry<RowType>::TableType;
-        return SelectQuery<TT>(_db);
+        return detail::make_basic_query<typename TableRegistry<Row>::TableType>(_db);
     }
 
     // ----------------------------------------------------------------
-    //  Select<TableType>() - explicit Table type (no registration needed)
+    // select<TableType>() - explicit table descriptor
     // ----------------------------------------------------------------
-    template <typename TableType>
-        requires IsTable<TableType>
-    [[nodiscard]] SelectQuery<TableType> select() const
+    template <ITable TableType>
+    [[nodiscard]] auto select() const
     {
-        return SelectQuery<TableType>(_db);
+        return detail::make_basic_query<TableType>(_db);
     }
 
-    // Existing: Select<User>()  or  Select<UserTable>()
-    // New:      Select<&User::id, &User::name>()
-
+    // ----------------------------------------------------------------
+    // select<&T::col1, &T::col2, …>()  - projected columns
+    // ----------------------------------------------------------------
     template <auto... MemberPtrs>
         requires detail::HomogeneousMemberPtrs<MemberPtrs...>
     [[nodiscard]] auto select() const
     {
-        using ObjType = detail::projection_object_t<MemberPtrs...>;
-        static_assert(HasRegisteredTable<ObjType>,
-                      "Select<MPs...>: row type not registered.");
-        using TT = TableRegistry<ObjType>::TableType;
-        return ColumnProjectionQuery<TT, MemberPtrs...>(_db);
+        using Obj = detail::ObjectOf<detail::firstOf<MemberPtrs...>>;
+        static_assert(HasRegisteredTable<Obj>,
+                      "select<MemberPtrs...>: owner row type is not registered.");
+
+        return detail::make_basic_query<typename TableRegistry<Obj>::TableType>(_db)
+            .template select<MemberPtrs...>();
     }
 
     // ----------------------------------------------------------------
-    //  Count<RowType>()
+    // joinOn<&L::col, &R::col>() - explicit JOIN entry point
     // ----------------------------------------------------------------
-    template <typename RowType>
-        requires HasRegisteredTable<RowType>
+    template <auto LeftMp, auto RightMp, ast::JoinKind Kind = ast::JoinKind::Inner>
+    [[nodiscard]] auto joinOn() const
+    {
+        using LObj = detail::ObjectOf<LeftMp>;
+        static_assert(HasRegisteredTable<LObj>,
+                      "joinOn<LMp,RMp>: left row type must be registered.");
+
+        return detail::make_basic_query<typename TableRegistry<LObj>::TableType>(_db)
+            .template joinOn<LeftMp, RightMp, Kind>();
+    }
+
+    // ----------------------------------------------------------------
+    // repo<TableType>() - full CRUD repository
+    // ----------------------------------------------------------------
+    template <ITable TableType>
+    [[nodiscard]] auto repo() const
+    {
+        return Repository<TableType>{_db};
+    }
+
+    // ----------------------------------------------------------------
+    // count<Row>() - convenience shorthand
+    // ----------------------------------------------------------------
+    template <typename Row>
+        requires HasRegisteredTable<Row>
     [[nodiscard]] i64 count() const
     {
-        using TT = TableRegistry<RowType>::TableType;
-        return Repository<TT>(_db).count();
+        return repo<typename TableRegistry<Row>::TableType>().count();
     }
 
     // ----------------------------------------------------------------
-    //  Repo<TableType>()  - full CRUD repository
-    // ----------------------------------------------------------------
-    template <typename TableType>
-        requires IsTable<TableType>
-    [[nodiscard]] Repository<TableType> repo()
-    {
-        return Repository<TableType>(_db);
-    }
-
-    // ----------------------------------------------------------------
-    //  JoinOn<&L::field, &R::field>()  - explicit-condition INNER JOIN
-    // ----------------------------------------------------------------
-    /// Builds a JoinQuery with an ON clause derived from two member pointers.
-    template <auto LeftMember, auto RightMember>
-    [[nodiscard]] auto joinOn()
-    {
-        using LObj = detail::member_ptr<decltype(LeftMember)>::ObjectType;
-        using RObj = detail::member_ptr<decltype(RightMember)>::ObjectType;
-
-        static_assert(HasRegisteredTable<LObj> && HasRegisteredTable<RObj>,
-                      "JoinOn<>: both row types must be registered with ORM_REGISTER_TABLE.");
-
-        using LT = TableRegistry<LObj>::TableType;
-        using RT = TableRegistry<RObj>::TableType;
-
-        constexpr std::string_view lc = LT::template columnNameOf<LeftMember>();
-        constexpr std::string_view rc = RT::template columnNameOf<RightMember>();
-
-        static_assert(!lc.empty() && !rc.empty(),
-                      "JoinOn<>: one or both member pointers are not mapped to columns.");
-
-        return JoinQuery<LT, RT>(_db, {}, lc, rc);
-    }
-
-    // ----------------------------------------------------------------
-    //  Transactions
+    // Transactions / raw access
     // ----------------------------------------------------------------
     [[nodiscard]] engine::SqliteTransaction beginTransaction() { return _db.beginTransaction(); }
 
-    // ----------------------------------------------------------------
-    //  Raw access
-    // ----------------------------------------------------------------
     [[nodiscard]] engine::SqliteConnection& rawAccess() noexcept { return _db; }
 
 private:
     engine::SqliteConnection& _db;
 };
 
-// ============================================================================
-//  §18  DDL bootstrap helper
-// ============================================================================
-
-/// Execute CREATE TABLE IF NOT EXISTS for every supplied Table type.
-/// Typically called once at application startup, after migrations.
-export template <typename... Tables>
-requires(IsTable<Tables> && ...)
+// -----------------------------------------------------------------------
+// §18  DDL bootstrap helper  (unchanged: DDL is schema-level, not query)
+// -----------------------------------------------------------------------
+export template <ITable... Tables>
 void createTablesIfNotExist(engine::SqliteConnection& db)
 {
-    ([&]<typename T>()
+    ([&]()
     {
-        db.exec(T::create_table_sql(true));
-        if constexpr (T::indexCount > 0)
-        {
-            db.exec(T::create_indexes_sql(true));
-        }
-    }.template operator()<Tables>(), ...);
+        db.exec(Tables::create_table_sql(true));
+        if constexpr (Tables::indexCount > 0) db.exec(Tables::create_indexes_sql(true));
+    }(), ...);
 }
+
 } // namespace tewi

@@ -1,6 +1,7 @@
 export module tewi:registry;
 
 import std;
+import :table;
 
 // ============================================================================
 //  TableRegistry  - maps Row types to their Table descriptors

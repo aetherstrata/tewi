@@ -94,9 +94,9 @@ TEST_CASE("Primary keys: columns tuple", "[orm][schema][composite-pk]")
 TEST_CASE("ORM Hydration: Populate structs from composite key results", "[orm][runtime][composite-pk]")
 {
     auto raw = engine::InMemory();
+    createTablesIfNotExist<OrderItemTable>(raw);
     OrmDatabase db(raw);
     auto user_groups = db.repo<OrderItemTable>();
-    user_groups.createTable();
 
     user_groups.insert({1, 10, "first", 1});
     user_groups.insert({2, 10, "second", 2});
@@ -135,9 +135,9 @@ TEST_CASE("ORM Hydration: Populate structs from composite key results", "[orm][r
 TEST_CASE("ORM Binding: Bind composite key structs to statements", "[orm][runtime][composite-pk]")
 {
     auto raw = engine::InMemory();
+    createTablesIfNotExist<OrderItemTable>(raw);
     OrmDatabase db(raw);
     auto user_groups = db.repo<OrderItemTable>();
-    user_groups.createTable();
 
     SECTION("Bind and insert OrderItem with composite key")
     {
@@ -181,10 +181,9 @@ TEST_CASE("ORM Binding: Bind composite key structs to statements", "[orm][runtim
 TEST_CASE("ORM Database: Full CRUD with composite keys", "[orm][runtime][composite-pk]")
 {
     auto raw = engine::InMemory();
+    createTablesIfNotExist<OrderItemTable>(raw);
     OrmDatabase db(raw);
     auto order_items = db.repo<OrderItemTable>();
-
-    order_items.createTable();
 
     SECTION("Insert order items with composite key")
     {
@@ -202,6 +201,7 @@ TEST_CASE("ORM Database: Full CRUD with composite keys", "[orm][runtime][composi
     SECTION("Query by composite key (order_id + item_number)")
     {
         OrderItem item{200, 5, "Doohickey", 7};
+
         order_items.insert(item);
 
         auto fetched = std::move(db.select<OrderItemTable>())
@@ -226,6 +226,8 @@ TEST_CASE("ORM Database: Full CRUD with composite keys", "[orm][runtime][composi
         order_items.insert(item2);
         order_items.insert(item3);
 
+        REQUIRE(order_items.count() == 3);
+
         auto rows = db.select<OrderItemTable>()
                       .where<&OrderItem::order_id>(300)
                       .orderBy<&OrderItem::item_number>()
@@ -242,15 +244,17 @@ TEST_CASE("ORM Database: Full CRUD with composite keys", "[orm][runtime][composi
 TEST_CASE("ORM Three-Column Composite Keys", "[orm][runtime][composite-pk]")
 {
     auto raw = engine::InMemory();
+    createTablesIfNotExist<ThreeKeyCompositeTable>(raw);
     OrmDatabase db(raw);
     auto resources = db.repo<ThreeKeyCompositeTable>();
-    resources.createTable();
 
     SECTION("Insert and query by three-column key")
     {
         ThreeKeyComposite resource{1, 5, 42, "Production Database"};
 
-        resources.insert(resource);
+        i64 id = resources.insert(resource);
+
+        REQUIRE(id > 0);
 
         auto fetched = db.select<ThreeKeyCompositeTable>()
                          .where<&ThreeKeyComposite::key1>(1)
@@ -275,6 +279,8 @@ TEST_CASE("ORM Three-Column Composite Keys", "[orm][runtime][composite-pk]")
         resources.insert(r2);
         resources.insert(r3);
 
+        REQUIRE(resources.count() == 3);
+
         auto rows = db.select<ThreeKeyCompositeTable>()
                       .where<&ThreeKeyComposite::key1>(1)
                       .where<&ThreeKeyComposite::key2>(5)
@@ -290,11 +296,12 @@ TEST_CASE("ORM Three-Column Composite Keys", "[orm][runtime][composite-pk]")
     {
         ThreeKeyComposite resource{1, 5, 42, "Production Database"};
 
-        resources.insert(resource);
+        i64 id = resources.insert(resource);
 
+        REQUIRE(id > 0);
         REQUIRE(resources.count() == 1);
 
-        resources.remove(1, 5, 42);
+        resources.erase(1, 5, 42);
 
         REQUIRE(resources.count() == 0);
     }

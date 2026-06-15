@@ -49,13 +49,13 @@ public:
                           + detail::constraint_ddl<Cs...>(columnName);
 
         // Append REFERENCES clause for each ForeignKey constraint.
-        ([&]()
+        ([&]() constexpr
         {
             if constexpr (detail::is_foreign_key<Cs>::value)
             {
-                using RT  = Cs::Table;
-                sql      += " REFERENCES " + std::string(RT::tableName) + "("
-                       + std::string(RT::template ColumnOf<Cs::member>::columnName) + ")";
+                using RT = Cs::Table;
+                sql     += " REFERENCES " + std::string(RT::tableName) + "("
+                    + std::string(RT::template ColumnOf<Cs::member>::columnName) + ")";
             }
         }(), ...);
         return sql;
@@ -66,4 +66,16 @@ public:
 template <typename... Is>
 struct Columns
 {};
+
+namespace detail
+{
+template <typename T>
+struct is_column : std::false_type {};
+
+template <FixedString name, auto MP, typename... Cs>
+struct is_column<Column<name, MP, Cs...>> : std::true_type {};
+} // namespace detail
+
+template <typename T>
+concept IsColumn = detail::is_column<T>::value;
 } // namespace tewi

@@ -1,68 +1,92 @@
+// ============================================================================
+// Repository.ixx  –  tewi:repository
+//
+// Pure CRUD façade.  All read-side logic is delegated to BasicQuery via
+// the query() entry point.  countWhere() uses SqliteRenderer directly
+// to compile a COUNT(*) from the query's current SelectSpec.
+// ============================================================================
 export module tewi:repository;
 
-import :select;
+import :basic_query;
+import :row_hydrator;
+import :ast_spec;
+import :select_renderer;
 import :sqlite_connection;
 import :sqlite_statement;
 import :sqlite_transaction;
+import :table;
+import :type_adapter;
+import :base_adapters;
 
 import std;
 
-// ============================================================================
-//  §16  Repository<Table>  -  CRUD + Count + BulkInsert
-// ============================================================================
-namespace tewi
+export namespace tewi
 {
-/// Full CRUD operations for a single table type.
-export template <typename TableType>
-requires IsTable<TableType>
+template <ITable TableType>
 class Repository
 {
-public:
     using RowType = TableType::RowType;
+    using KeyType = TableType::KeyType;
+public:
 
-    explicit Repository(engine::SqliteConnection& db)
+    explicit Repository(engine::SqliteConnection& db) noexcept
         : _db(db)
     {}
 
     // ----------------------------------------------------------------
-    //  Schema management
+    // query() – fluent BasicQuery root (read side)
     // ----------------------------------------------------------------
+    [[nodiscard]] auto query() const { return detail::make_basic_query<TableType>(_db); }
 
-    void createTable(bool if_not_exists = true)
+    // ----------------------------------------------------------------
+    // all() – fetch every row
+    // ----------------------------------------------------------------
+    [[nodiscard]] std::vector<RowType> all() const { return query().toVector(); }
+
+    // ----------------------------------------------------------------
+    // findBy<MemberPtr>(value) – find first matching row
+    // ----------------------------------------------------------------
+    template <auto MemberPtr, typename V>
+    [[nodiscard]] std::optional<RowType> findBy(V&& value) const
     {
-        _db.exec(TableType::create_table_sql(if_not_exists));
-        // Indexes are separate statements - SQLite requires this.
-        if constexpr (TableType::indexCount > 0)
-        {
-            _db.exec(TableType::create_indexes_sql(if_not_exists));
-        }
+        return query().template where<MemberPtr>(std::forward<V>(value)).limit(1).firstOrDefault();
     }
 
-    void dropTable(bool if_exists = true)
+    // ----------------------------------------------------------------
+    // count() – total row count
+    // ----------------------------------------------------------------
+    [[nodiscard]] i64 count() const
     {
-        _db.exec("DROP TABLE " + std::string(if_exists ? "IF EXISTS " : "")
-                 + std::string(TableType::tableName) + ";");
+        // Build a minimal SelectSpec and render COUNT(*)
+        ast::SelectSpec spec;
+        spec.from       = detail::make_table_ref<TableType>();
+        spec.projection = {.kind = ast::ProjectionKind::CountStar};
+
+        auto cq   = ast::compile(spec);
+        auto stmt = _db.prepare(cq.str());
+        // No WHERE bindings needed for a plain count
+        if (!stmt.step()) return 0;
+        return SqliteTypeAdapter<i64>::read(stmt, 0);
     }
 
     // ----------------------------------------------------------------
-    //  INSERT
+    // insert() – INSERT OR REPLACE
     // ----------------------------------------------------------------
-
-    /// Insert a single row.  Returns the rowid assigned by SQLite.
-    i64 insert(const RowType& obj)
+    [[nodiscard]] i64 insert(const RowType& obj) const
     {
-        auto stmt = _db.prepare(insert_sql());
-        TableType::bind_all(stmt, obj, 1);
+        const std::string sql = build_insert_sql();
+        auto stmt             = _db.prepare(sql);
+        TableType::bind_all(stmt, obj);
         stmt.exec();
         return _db.lastInsertRowId();
     }
 
-    /// Bulk-insert many rows inside a single transaction.
-    void insert(const std::vector<RowType>& rows)
+    void insert(const std::span<RowType>& rows) const
     {
         if (rows.empty()) return;
         auto txn  = _db.beginTransaction();
-        auto stmt = _db.prepare(insert_sql());
+        const std::string sql = build_insert_sql();
+        auto stmt = _db.prepare(sql);
         for (const auto& row : rows)
         {
             stmt.reset();
@@ -74,171 +98,113 @@ public:
     }
 
     // ----------------------------------------------------------------
-    //  UPDATE
+    // update() – UPDATE by primary key
     // ----------------------------------------------------------------
-
-    /// Update all non-PK columns for the row identified by its PK.
-    void update(const RowType& obj)
-    requires detail::HasPrimaryKey<TableType>
+    void update(const RowType& obj) const
     {
-        auto stmt = _db.prepare(update_sql());
-        i32 idx   = 1;
+        const std::string sql = build_update_sql();
+        auto stmt             = _db.prepare(sql);
 
-        // Bind non-PK fields first (SET clause)
-        std::apply([&](auto... cols)
+        // Bind non-PK fields first, then PK for WHERE
+        i32 idx = 1;
+        std::apply([&](auto... col_tags)
         {
-            ([&]<typename Col>(Col)
+            ([&](auto col_tag)
             {
-                if constexpr (!Col::isPrimaryKey)
+                using ColType = decltype(col_tag);
+                if constexpr (!ColType::isPrimaryKey)
                 {
-                    using FT  = Col::FieldType;
-                    const auto& val = obj.*(Col::member);
-                    SqliteTypeAdapter<FT>::bind(stmt, idx++, val);
+                    using FT = typename ColType::FieldType;
+                    SqliteTypeAdapter<FT>::bind(stmt, idx++, obj.*(ColType::member));
                 }
-            }(cols), ...);
+            }(col_tags), ...);
         }, typename TableType::ColumnsTuple{});
 
-        // Bind PK last (WHERE clause)
         TableType::bind_primary_key(stmt, obj, idx);
-
-        stmt.exec();
-    }
-
-    /// Bulk-update inside a single transaction.
-    void update(const std::vector<RowType>& rows)
-    {
-        if (rows.empty()) return;
-        auto txn = _db.beginTransaction();
-        for (const auto& row : rows)
-        {
-            this->update(row);
-        }
-        txn.commit();
+        stmt.step();
     }
 
     // ----------------------------------------------------------------
-    //  DELETE
+    // erase() – DELETE by primary key
     // ----------------------------------------------------------------
-
-    /// Delete the row with the given primary key value.
-    template <typename PKType>
-    requires detail::HasPrimaryKey<TableType> && SqliteAdaptable<PKType> && (TableType::primaryKeyCount == 1)
-    void remove(const PKType& pk_value)
-    {
-        const std::string sql = "DELETE FROM " + std::string(TableType::tableName) + " WHERE "
-                                + TableType::primary_key_where_clause() + ";";
-        auto stmt = _db.prepare(sql);
-        SqliteTypeAdapter<PKType>::bind(stmt, 1, pk_value);
-        stmt.exec();
-    }
-
-    /// Delete the row identified by a primary-key value pack.
     template <typename... PKValues>
-    requires detail::HasPrimaryKey<TableType>
-          && (sizeof...(PKValues) == std::tuple_size_v<typename TableType::KeyType>)
-          && detail::allOf<SqliteAdaptable<PKValues>...>
-    void remove(PKValues&&... pk_values)
+    requires (sizeof...(PKValues) > 1) // Required otherwise this would be ambiguous with the single-key overload
+    void erase(PKValues&&... pk_values) const
+    {
+        erase(std::make_tuple(std::forward<PKValues>(pk_values)...));
+    }
+
+    void erase(KeyType key) const
     {
         const std::string sql = "DELETE FROM " + std::string(TableType::tableName) + " WHERE "
                                 + TableType::primary_key_where_clause() + ";";
+
         auto stmt = _db.prepare(sql);
         i32 idx = 1;
-        (SqliteTypeAdapter<PKValues>::bind(stmt, idx++, pk_values), ...);
-        stmt.exec();
+        TableType::bind_primary_key(stmt, key);
+        stmt.step();
     }
 
-    /// Delete the row identified by a composite primary key stored in the row object.
-    void remove(const RowType& obj)
-    requires detail::HasPrimaryKey<TableType> && (TableType::primaryKeyCount > 1)
+    void erase(const RowType& obj) const
     {
         const std::string sql = "DELETE FROM " + std::string(TableType::tableName) + " WHERE "
                                 + TableType::primary_key_where_clause() + ";";
+
         auto stmt = _db.prepare(sql);
-        TableType::bind_primary_key(stmt, obj, 1);
-        stmt.exec();
-    }
-
-    /// Delete rows matching a prebuilt QueryState (from SelectQuery::state()).
-    void removeWhere(const detail::QueryState& qs)
-    {
-        const std::string sql =
-            "DELETE FROM " + std::string(TableType::tableName) + qs.where_sql() + ";";
-        auto stmt = _db.prepare(sql);
-        qs.bind_where(stmt);
-        stmt.exec();
-    }
-
-    // ----------------------------------------------------------------
-    //  COUNT
-    // ----------------------------------------------------------------
-
-    [[nodiscard]] i64 count()
-    {
-        const std::string sql = "SELECT COUNT(*) FROM " + std::string(TableType::tableName) + ";";
-        auto stmt             = _db.prepare(sql);
+        TableType::bind_primary_key(stmt, obj);
         stmt.step();
-        return stmt.columnLong(0);
     }
-
-    [[nodiscard]] i64 countWhere(const detail::QueryState& qs)
-    {
-        const std::string sql =
-            "SELECT COUNT(*) FROM " + std::string(TableType::tableName) + qs.where_sql() + ";";
-        auto stmt = _db.prepare(sql);
-        qs.bind_where(stmt);
-        stmt.step();
-        return stmt.columnLong(0);
-    }
-
-    // ----------------------------------------------------------------
-    //  SELECT shorthand (delegates to SelectQuery)
-    // ----------------------------------------------------------------
-    [[nodiscard]] SelectQuery<TableType> select() { return SelectQuery<TableType>(_db); }
 
 private:
     engine::SqliteConnection& _db;
 
-    [[nodiscard]] std::string insert_sql() const
+    // NOTE: DDL-style SQL (INSERT / UPDATE patterns) is deliberately kept
+    // here and not in SqliteRenderer, because these are row-mutation
+    // operations that don't share structure with SELECT queries.
+
+    [[nodiscard]] static std::string build_insert_sql()
     {
-        std::string columns{};
-        std::string queryState{};
+        std::string cols, placeholders;
         bool first = true;
-        std::apply([&](auto... c)
+        std::apply([&](auto... col_tags)
         {
-            ([&]<typename Col>(Col)
+            ([&](auto col_tag)
             {
                 if (!first)
                 {
-                    columns += ", ";
-                    queryState   += ", ";
+                    cols         += ", ";
+                    placeholders += ", ";
                 }
-                columns  += std::string(Col::columnName);
-                queryState    += "?";
-                first  = false;
-            }(c), ...);
+                cols         += std::string(decltype(col_tag)::columnName);
+                placeholders += "?";
+                first         = false;
+            }(col_tags), ...);
         }, typename TableType::ColumnsTuple{});
-        return "INSERT INTO " + std::string(TableType::tableName) + " (" + columns + ") VALUES (" + queryState
-               + ");";
+
+        return "INSERT OR REPLACE INTO " + std::string(TableType::tableName) + " (" + cols
+               + ") VALUES (" + placeholders + ");";
     }
 
-    [[nodiscard]] std::string update_sql() const
+    [[nodiscard]] static std::string build_update_sql()
     {
-        std::string set_clause{};
+        std::string sets;
         bool first = true;
-        std::apply([&](auto... c)
+        std::apply([&](auto... col_tags)
         {
-            ([&]<typename Col>(Col)
+            ([&](auto col_tag)
             {
-                if constexpr (!Col::isPrimaryKey)
+                using ColType = decltype(col_tag);
+                if constexpr (!ColType::isPrimaryKey)
                 {
-                    if (!first) set_clause += ", ";
-                    set_clause += std::string(Col::columnName) + " = ?";
-                    first       = false;
+                    if (!first) sets += ", ";
+                    sets  += std::string(ColType::columnName) + " = ?";
+                    first  = false;
                 }
-            }(c), ...);
+            }(col_tags), ...);
         }, typename TableType::ColumnsTuple{});
-        return "UPDATE " + std::string(TableType::tableName) + " SET " + set_clause + " WHERE "
-             + TableType::primary_key_where_clause() + ";";
+
+        return "UPDATE " + std::string(TableType::tableName) + " SET " + sets + " WHERE "
+               + TableType::primary_key_where_clause() + ";";
     }
 };
-} //namespace tewi
+} // namespace tewi

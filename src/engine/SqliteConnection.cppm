@@ -30,7 +30,7 @@ void SqliteConnection::exec(std::string_view sql)
     LOG_DBG("Executing SQL query: {}", sql);
 
     char* errmsg = nullptr;
-    const int rc = sqlite3_exec(Handle(), sql.data(), nullptr, nullptr, &errmsg);
+    const int rc = sqlite3_exec(handle(), sql.data(), nullptr, nullptr, &errmsg);
     if (rc != SQLITE_OK)
     {
         const std::string msg = errmsg != nullptr ? errmsg : "(no message)";
@@ -43,7 +43,7 @@ void SqliteConnection::exec(std::string_view sql)
 SqliteStatement SqliteConnection::prepare(std::string_view sql)
 {
     LOG_DBG("Preparing SQL statement: {}", sql);
-    return SqliteStatement{Handle(), sql};
+    return SqliteStatement{handle(), sql};
 }
 
 SqliteTransaction SqliteConnection::beginTransaction()
@@ -51,7 +51,7 @@ SqliteTransaction SqliteConnection::beginTransaction()
     return SqliteTransaction(*this);
 }
 
-int SqliteConnection::Changes() const noexcept
+int SqliteConnection::changes() const noexcept
 {
     return sqlite3_changes(_db.get());
 }

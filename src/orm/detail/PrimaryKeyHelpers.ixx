@@ -80,8 +80,17 @@ public:
                                     tail_type>;
 };
 
+template <typename T>
+struct unwrap_single_tuple { using type = T; };
+
+template <typename T>
+struct unwrap_single_tuple<std::tuple<T>> { using type = T; };
+
+template <typename T>
+using UnwrapSingleTuple = unwrap_single_tuple<T>::type;
+
 template <typename... Cols>
-using PrimaryKeyType = primary_key_type<Cols...>::type;
+using PrimaryKeyType = typename primary_key_type<Cols...>::type;
 
 // -----------------------------------------------------------------------
 //  Build full DDL suffix for a pack of constraints (except FK REFERENCES).

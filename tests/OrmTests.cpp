@@ -17,12 +17,12 @@ TEST_CASE("ORM Concepts: Type Classification Validation", "[orm][concepts]")
     SECTION("IsTable Concept")
     {
         // Valid tables should satisfy the concept
-        STATIC_REQUIRE(tewi::IsTable<UserTable>);
-        STATIC_REQUIRE(tewi::IsTable<PostTable>);
+        STATIC_REQUIRE(tewi::ITable<UserTable>);
+        STATIC_REQUIRE(tewi::ITable<PostTable>);
 
         // Plain structs or arbitrary types should fail the concept
-        STATIC_REQUIRE_FALSE(tewi::IsTable<User>);
-        STATIC_REQUIRE_FALSE(tewi::IsTable<int>);
+        STATIC_REQUIRE_FALSE(tewi::ITable<User>);
+        STATIC_REQUIRE_FALSE(tewi::ITable<int>);
     }
 }
 
@@ -109,7 +109,7 @@ TEST_CASE("ORM: Schema Creation and Basic CRUD", "[orm][crud]")
         i64 count_before = db.count<User>();
         REQUIRE(count_before == 1);
 
-        users.remove(id);
+        users.erase(id);
         i64 count_after = db.count<User>();
         REQUIRE(count_after == 0);
     }
@@ -117,22 +117,24 @@ TEST_CASE("ORM: Schema Creation and Basic CRUD", "[orm][crud]")
 
 TEST_CASE("ORM: Advanced Queries and Filtering", "[orm][select]")
 {
+    std::vector<User> toInsert {
+            {1, "Dave", 20},
+            {2, "Eve", 25},
+            {3, "Frank", 25},
+            {4, "Grace", 40}
+    };
+
     auto raw = engine::InMemory();
     OrmDatabase db(raw);
     tewi::createTablesIfNotExist<UserTable>(raw);
 
     auto users = db.repo<UserTable>();
-    users.insert({
-        {1, "Dave", 20},
-        {2, "Eve", 25},
-        {3, "Frank", 25},
-        {4, "Grace", 40}
-    });
+    users.insert(toInsert);
 
     SECTION("WhereOp and OrderBy")
     {
         auto results = db.select<User>()
-                           .whereOp<&User::age>(">=", 25)
+                           .where<&User::age>(Compare::GreaterEqual, 25)
                            .orderBy<&User::username>(Order::DESC)
                            .toVector();
 

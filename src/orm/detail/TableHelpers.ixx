@@ -11,9 +11,10 @@ consteval bool unique_column_names()
     {
         return ((First::columnName != Rest::columnName) && ...) && unique_column_names<Rest...>();
     }
-    else return true;
+    else
+        return true;
 }
 
-template<typename... Cols>
+template <typename... Cols>
 concept UniqueColumnNames = unique_column_names<Cols...>();
-}
+} // namespace tewi::detail

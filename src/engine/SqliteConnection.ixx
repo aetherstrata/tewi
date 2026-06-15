@@ -156,7 +156,7 @@ public:
      *
      * @return Non-owning pointer to the underlying @c sqlite3 connection.
      */
-    [[nodiscard]] sqlite3* Handle() const noexcept { return _db.get(); }
+    [[nodiscard]] sqlite3* handle() const noexcept { return _db.get(); }
 
     /**
      * @brief Returns the number of rows modified by the most recent DML statement.
@@ -166,7 +166,7 @@ public:
      *
      * @return Row-change count as a non-negative integer.
      */
-    [[nodiscard]] int Changes() const noexcept;
+    [[nodiscard]] int changes() const noexcept;
 
     /**
      * @brief Returns the row ID inserted by the most recent successful @c INSERT.

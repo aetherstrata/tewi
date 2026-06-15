@@ -1,4 +1,5 @@
 target_sources(${PROJECT_NAME} PRIVATE
+        ast/AstRenderer.cppm
         common/Log.h
         common/Logging.cppm
         engine/SqliteConnection.cppm
@@ -10,6 +11,8 @@ target_sources(${PROJECT_NAME} PRIVATE
 target_sources(${PROJECT_NAME} PUBLIC
         FILE_SET CXX_MODULES FILES
         module.ixx
+        ast/AstRenderer.ixx
+        ast/AstSpec.ixx
         common/FixedString.ixx
         common/Logging.ixx
         common/NumberTypes.ixx
@@ -18,16 +21,15 @@ target_sources(${PROJECT_NAME} PUBLIC
         engine/SqliteMigration.ixx
         engine/SqliteStatement.ixx
         engine/SqliteTransaction.ixx
+        orm/BasicQuery.ixx
         orm/Column.ixx
+        orm/Compare.ixx
         orm/Constraints.ixx
         orm/Index.ixx
-        orm/JoinQuery.ixx
         orm/Order.ixx
         orm/OrmDatabase.ixx
-        orm/Projection.ixx
-        orm/QueryRange.ixx
         orm/Repository.ixx
-        orm/SelectQuery.ixx
+        orm/RowHydrator.ixx
         orm/Table.ixx
         orm/TableRegistry.ixx
         orm/TypeAdapter.ixx
@@ -35,6 +37,5 @@ target_sources(${PROJECT_NAME} PUBLIC
         orm/detail/PrimaryKeyHelpers.ixx
         orm/detail/ForeignKeyHelpers.ixx
         orm/detail/MemberTraits.ixx
-        orm/detail/QueryState.ixx
         orm/detail/TableHelpers.ixx
 )

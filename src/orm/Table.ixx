@@ -141,6 +141,29 @@ public:
         return sql;
     }
 
+    static i32 bind_primary_key(engine::SqliteStatement& stmt, const KeyType& key, const i32 bindOffset = 1)
+    {
+        i32 idx = bindOffset;
+        // Wrap scalar into tuple<T> if needed; tuple stays unchanged
+        auto normalized = [&]()
+        {
+            if constexpr (detail::isTuple<KeyType>)
+                return key;                     // already a tuple
+            else
+                return std::make_tuple(key);     // wrap scalar
+        }();
+
+        std::apply([&](const auto&... fields)
+        {
+            ([&]()
+            {
+                using FT = std::decay_t<decltype(fields)>;
+                SqliteTypeAdapter<FT>::bind(stmt, idx++, fields);
+            }(), ...);
+        }, normalized);
+        return idx;
+    }
+
     static i32 bind_primary_key(engine::SqliteStatement& stmt, const T& obj, const i32 bindOffset = 1)
     {
         i32 idx = bindOffset;
@@ -206,6 +229,6 @@ struct is_table<Table<name, T, ColPack, IdxPack>> : std::true_type {};
 } // namespace detail
 
 export template <typename T>
-concept IsTable = detail::is_table<T>::value;
+concept ITable = detail::is_table<T>::value;
 
 } // namespace tewi

@@ -105,10 +105,10 @@ using SimpleEntityTable = Table<"simple_entities", SimpleEntity,
 
 #include "tewi/RegisterTable.h"
 
-TEWI_REGISTER_TABLE(tewi::tests::User, tewi::tests::UserTable)
-TEWI_REGISTER_TABLE(tewi::tests::OrderItem, tewi::tests::OrderItemTable)
-TEWI_REGISTER_TABLE(tewi::tests::Post, tewi::tests::PostTable)
-TEWI_REGISTER_TABLE(tewi::tests::ThreeKeyComposite, tewi::tests::ThreeKeyCompositeTable)
-TEWI_REGISTER_TABLE(tewi::tests::SimpleEntity, tewi::tests::SimpleEntityTable)
+TEWI_REGISTER_TABLE(tewi::tests::UserTable)
+TEWI_REGISTER_TABLE(tewi::tests::OrderItemTable)
+TEWI_REGISTER_TABLE(tewi::tests::PostTable)
+TEWI_REGISTER_TABLE(tewi::tests::ThreeKeyCompositeTable)
+TEWI_REGISTER_TABLE(tewi::tests::SimpleEntityTable)
 
 #endif // TEWI_TABLES_H

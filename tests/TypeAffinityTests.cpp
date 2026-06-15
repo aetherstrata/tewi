@@ -112,6 +112,9 @@ TEST_CASE("Type Affinity: std::optional<i64>", "[orm][affinity][optional]")
 {
     SECTION("std::optional<i64> shall have affinity to INTEGER")
     {
+        static_assert(std::is_same_v<tewi::i64, long>,    "i64 is not long on this target");
+        static_assert(std::is_same_v<tewi::i32, int>,     "i32 is not int on this target");
+
         STATIC_REQUIRE(SqliteTypeAdapter<std::optional<i64>>::affinity == "INTEGER");
     }
     SECTION("std::optional<i64> shall be nullable")

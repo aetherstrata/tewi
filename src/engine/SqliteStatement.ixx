@@ -188,9 +188,9 @@ public:
      * @brief Advances the statement by one row
      *
      * @details Calls @c sqlite3_step() and interprets the result:
-     * - @c SQLITE_ROW  → a row is ready; returns @c true.
-     * - @c SQLITE_DONE → iteration finished; returns @c false.
-     * - Anything else → throws @c SqliteError.
+     * - @c SQLITE_ROW  -> a row is ready; returns @c true.
+     * - @c SQLITE_DONE -> iteration finished; returns @c false.
+     * - Anything else -> throws @c SqliteError.
      *
      * @return @c true if a result row is available; @c false when the statement
      *         has been fully executed.

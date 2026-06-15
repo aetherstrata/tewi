@@ -85,7 +85,7 @@ struct member_ptr<Field Obj::*>
     using ObjectType = Obj;
 
     /// The type of the member being pointed to (`Field` in `Field Obj::*`).
-    using FieldType  = Field;
+    using FieldType = Field;
 };
 
 template <auto MP, typename... Ts>
@@ -106,7 +106,8 @@ struct mp_column<MP, Col, Rest...>
         {
             return Col::member == MP;
         }
-        else return false;
+        else
+            return false;
     }
 
     using type = std::conditional_t<match(), Col, typename mp_column<MP, Rest...>::type>;
@@ -124,16 +125,9 @@ using ObjectOf = member_ptr<std::remove_cv_t<decltype(MP)>>::ObjectType;
 // All MPs share the same object type - works for 1 or more MPs.
 template <auto... MPs>
 concept HomogeneousMemberPtrs =
-    sizeof...(MPs) > 0 &&
-    (std::is_same_v<ObjectOf<MPs>,
-                    ObjectOf<firstOf<MPs...>>> && ...);
+    sizeof...(MPs) > 0 && (std::is_same_v<ObjectOf<MPs>, ObjectOf<firstOf<MPs...>>> && ...);
 
-// All member pointers must belong to the same class T.
-template <auto... MPs>
-requires HomogeneousMemberPtrs<MPs...>
-using projection_object_t = ObjectOf<firstOf<MPs...>>;
-
-template<typename First, typename... Rest>
+template <typename First, typename... Rest>
 consteval bool unique_member_ptrs()
 {
     if constexpr (sizeof...(Rest) == 0)
@@ -142,9 +136,10 @@ consteval bool unique_member_ptrs()
     }
     else
     {
-        return (([]<typename Other>()
+        return ((
+                    []<typename Other>()
         {
-            if constexpr (requires{ First::member == Other::member; })
+            if constexpr (requires { First::member == Other::member; })
             {
                 return First::member != Other::member;
             }
@@ -152,10 +147,59 @@ consteval bool unique_member_ptrs()
             {
                 return true;
             }
-        }.template operator()<Rest>()) && ...) && unique_member_ptrs<Rest...>();
+        }.template operator()<Rest>())
+                && ...)
+               && unique_member_ptrs<Rest...>();
     }
 }
 
-template<typename... Cols>
+template <typename... Cols>
 concept UniqueMemberPointers = unique_member_ptrs<Cols...>();
+
+template <auto MP>
+using FieldOf = member_ptr<decltype(MP)>::FieldType;
+
+template <auto... MP>
+using FieldsOf = std::tuple<FieldOf<MP>...>;
+
+template <auto... MemberPtrs>
+struct projection_result;
+
+template <auto MP>
+struct projection_result<MP>
+{
+    using type = FieldOf<MP>;
+};
+
+template <auto MP1, auto MP2, auto... Rest>
+struct projection_result<MP1, MP2, Rest...>
+{
+    using type = std::tuple<FieldOf<MP1>, FieldOf<MP2>, FieldOf<Rest>...>;
+};
+
+template <auto... MemberPtrs>
+using ProjectionResult = typename projection_result<MemberPtrs...>::type;
+
+template <typename Tuple, typename... Ts>
+concept SameAsTuple = []<typename... Us>(std::tuple<Us...>*)
+{
+    return sizeof...(Ts) == sizeof...(Us) && (std::is_same_v<Ts, Us> && ...);
+}(static_cast<Tuple*>(nullptr));
+
+template <typename T>
+inline constexpr bool isTuple = false;
+
+template <typename... Ts>
+inline constexpr bool isTuple<std::tuple<Ts...>> = true;
+
+template <typename T>
+struct remove_optional : std::type_identity<T>
+{};
+
+template <typename T>
+struct remove_optional<std::optional<T>> : std::type_identity<T>
+{};
+
+template <typename T>
+using RemoveOptional = remove_optional<T>::type;
 } // namespace tewi::detail

@@ -58,7 +58,7 @@ struct FindFkTo
     using type = void;
 };
 
-// Base case: empty tuple → not found
+// Base case: empty tuple -> not found
 template <typename TargetTable>
 struct FindFkTo<TargetTable>
 {
