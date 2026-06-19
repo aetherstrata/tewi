@@ -2,7 +2,7 @@ export module tewi:table;
 
 import :column;
 import :index;
-import :table_helpers;
+import :column_helpers;
 import :pk_helpers;
 import :type_adapter;
 
@@ -218,17 +218,4 @@ private:
         return sql;
     }
 };
-
-namespace detail
-{
-template <typename T>
-struct is_table : std::false_type {};
-
-template <FixedString name, typename T, typename ColPack, typename IdxPack>
-struct is_table<Table<name, T, ColPack, IdxPack>> : std::true_type {};
-} // namespace detail
-
-export template <typename T>
-concept ITable = detail::is_table<T>::value;
-
 } // namespace tewi

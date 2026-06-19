@@ -24,7 +24,49 @@ struct PredicateNode
 {
     std::string column; ///< Fully qualified: "table.col" or "col"
     Compare op;         ///< "=", "<", "LIKE", ...
-    std::move_only_function<void(engine::SqliteStatement&, i32) const> binder;
+};
+
+// -----------------------------------------------------------------------
+// AssignmentNode – one "col = ?" pair used by INSERT and UPDATE
+// -----------------------------------------------------------------------
+
+/// Represents a single column assignment: "col = ?".
+/// Used in InsertSpec (VALUES list) and UpdateSpec (SET clause).
+struct AssignmentNode
+{
+    std::string column;  ///< Plain column name (not qualified)
+};
+
+// -----------------------------------------------------------------------
+// InsertSpec – INSERT [OR REPLACE] INTO <table> (<cols>) VALUES (?, ...)
+// -----------------------------------------------------------------------
+
+struct InsertSpec
+{
+    std::string_view table;
+    bool or_replace = false;                 ///< OR REPLACE conflict clause
+    std::vector<AssignmentNode> assignments; ///< one entry per column
+};
+
+// -----------------------------------------------------------------------
+// UpdateSpec – UPDATE <table> SET col=?, ... WHERE col=?, ...
+// -----------------------------------------------------------------------
+
+struct UpdateSpec
+{
+    std::string_view            table;
+    std::vector<AssignmentNode> assignments; ///< SET clause (non-PK columns)
+    std::vector<PredicateNode>  where;       ///< WHERE clause (PK columns)
+};
+
+// -----------------------------------------------------------------------
+// DeleteSpec – DELETE FROM <table> WHERE col=?, ...
+// -----------------------------------------------------------------------
+
+struct DeleteSpec
+{
+    std::string_view           table;
+    std::vector<PredicateNode> where;   ///< WHERE predicates (PK columns)
 };
 
 // -----------------------------------------------------------------------
@@ -91,32 +133,5 @@ struct SelectSpec
     std::vector<OrderNode> order_by;
     std::optional<i32> limit;
     std::optional<i32> offset;
-};
-
-// -----------------------------------------------------------------------
-// CompiledQuery – output of the renderer: ready SQL + bound parameters
-// -----------------------------------------------------------------------
-
-struct CompiledQuery
-{
-    /// Bind all captured WHERE values to a freshly-prepared statement.
-    void bind(engine::SqliteStatement& stmt) const
-    {
-        i32 idx = 1;
-        for (const auto& binder : _binders) binder(stmt, idx++);
-    }
-
-    std::string str() const { return sql.str(); }
-
-    void operator<<(std::string_view s) { sql << s; }
-
-    void operator<<(std::move_only_function<void(engine::SqliteStatement&, i32) const> binder)
-    {
-        _binders.emplace_back(std::move(binder));
-    }
-
-private:
-    std::ostringstream sql;
-    std::vector<std::move_only_function<void(engine::SqliteStatement&, i32) const>> _binders;
 };
 } // namespace tewi::ast

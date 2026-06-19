@@ -1,5 +1,7 @@
 module tewi:member_traits;
 
+import :type_helpers;
+
 import std;
 // ============================================================================
 //  MemberPtrTraits - decompose pointer-to-member types
@@ -7,44 +9,6 @@ import std;
 
 namespace tewi::detail
 {
-/**
- * @brief Extracts the first value from a non-type template parameter pack.
- *
- * Useful when @c std::get<0> is unavailable because the pack is a value pack
- * (auto...) rather than a type pack.
- * @tparam First The first value in the pack.
- * @tparam Rest  Remaining values (ignored).
- */
-template <auto First, auto... Rest>
-struct first_of
-{
-    /// Stores the first value of the pack.
-    static constexpr auto value = First;
-};
-
-/**
- * @brief Convenience variable template for @c first_of to directly access the first value.
- * @tparam Vs Pack of values to extract from. The first value is returned as a constexpr.
- */
-template <auto... Vs>
-constexpr auto firstOf = first_of<Vs...>::value;
-
-/**
- * @brief Checks if @b any of the provided boolean template parameters are @c true.
- * @tparam T Pack of boolean values to evaluate.
- * @note Equivalent to a fold expression `(... || T)`.
- */
-template <bool... T>
-constexpr bool anyOf = (... || T);
-
-/**
- * @brief Checks if @b all the provided boolean template parameters are @b true.
- * @tparam T Pack of boolean values to evaluate.
- * @note Equivalent to a fold expression `(... && T)`.
- */
-template <bool... T>
-constexpr bool allOf = (... && T);
-
 /**
  * @brief Primary template for member pointer decomposition.
  *
@@ -106,8 +70,7 @@ struct mp_column<MP, Col, Rest...>
         {
             return Col::member == MP;
         }
-        else
-            return false;
+        else return false;
     }
 
     using type = std::conditional_t<match(), Col, typename mp_column<MP, Rest...>::type>;
@@ -136,8 +99,7 @@ consteval bool unique_member_ptrs()
     }
     else
     {
-        return ((
-                    []<typename Other>()
+        return ([]<typename Other>()
         {
             if constexpr (requires { First::member == Other::member; })
             {
@@ -147,9 +109,8 @@ consteval bool unique_member_ptrs()
             {
                 return true;
             }
-        }.template operator()<Rest>())
-                && ...)
-               && unique_member_ptrs<Rest...>();
+        }.template operator()<Rest>() && ...)
+        && unique_member_ptrs<Rest...>();
     }
 }
 
@@ -179,27 +140,4 @@ struct projection_result<MP1, MP2, Rest...>
 
 template <auto... MemberPtrs>
 using ProjectionResult = typename projection_result<MemberPtrs...>::type;
-
-template <typename Tuple, typename... Ts>
-concept SameAsTuple = []<typename... Us>(std::tuple<Us...>*)
-{
-    return sizeof...(Ts) == sizeof...(Us) && (std::is_same_v<Ts, Us> && ...);
-}(static_cast<Tuple*>(nullptr));
-
-template <typename T>
-inline constexpr bool isTuple = false;
-
-template <typename... Ts>
-inline constexpr bool isTuple<std::tuple<Ts...>> = true;
-
-template <typename T>
-struct remove_optional : std::type_identity<T>
-{};
-
-template <typename T>
-struct remove_optional<std::optional<T>> : std::type_identity<T>
-{};
-
-template <typename T>
-using RemoveOptional = remove_optional<T>::type;
 } // namespace tewi::detail

@@ -118,7 +118,4 @@ template <typename... Cs>
     return sql;
 }
 
-// Requires the table to have one primary key
-template <typename TableType>
-concept HasPrimaryKey = TableType::primaryKeyCount > 0;
 } // namespace tewi::detail

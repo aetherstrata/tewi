@@ -13,9 +13,11 @@ target_sources(${PROJECT_NAME} PUBLIC
         tewi.ixx
         ast/AstRenderer.ixx
         ast/AstSpec.ixx
+        ast/CompiledQuery.ixx
         common/FixedString.ixx
         common/Logging.ixx
         common/NumberTypes.ixx
+        common/TypeHelpers.ixx
         engine/SqliteConnection.ixx
         engine/SqliteError.ixx
         engine/SqliteMigration.ixx
@@ -34,8 +36,9 @@ target_sources(${PROJECT_NAME} PUBLIC
         orm/TableRegistry.ixx
         orm/TypeAdapter.ixx
         orm/detail/BaseTypeAdapters.ixx
-        orm/detail/PrimaryKeyHelpers.ixx
+        orm/detail/ColumnHelpers.ixx
         orm/detail/ForeignKeyHelpers.ixx
         orm/detail/MemberTraits.ixx
+        orm/detail/PrimaryKeyHelpers.ixx
         orm/detail/TableHelpers.ixx
 )

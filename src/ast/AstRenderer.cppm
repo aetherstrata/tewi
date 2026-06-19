@@ -2,20 +2,7 @@ module tewi;
 
 namespace tewi::ast
 {
-static std::string op_to_sql(Compare op)
-{
-    using tewi::Compare;
-    switch (op)
-    {
-    case Compare::Equal:        return "=";
-    case Compare::NotEqual:     return "!=";
-    case Compare::Less:         return "<";
-    case Compare::LessEqual:    return "<=";
-    case Compare::Greater:      return ">";
-    case Compare::GreaterEqual: return ">=";
-    default:                    throw std::runtime_error("Invalid Compare operator");
-    }
-}
+
 // -----------------------------------------------------------------------
 // Projection clause
 // -----------------------------------------------------------------------
@@ -48,22 +35,17 @@ static std::string op_to_sql(Compare op)
 }
 
 // -----------------------------------------------------------------------
-// WHERE clause - also fills CompiledQuery._binders
+// WHERE clause - also fills CompiledShape._binders
 // -----------------------------------------------------------------------
 [[nodiscard]] static std::string where_sql(const std::vector<PredicateNode>& preds,
-                                           CompiledQuery& cq)
+                                           CompiledShape& cq)
 {
     std::string s = " WHERE ";
     bool first    = true;
     for (const auto& pred : preds)
     {
         if (!first) s += " AND ";
-        s += pred.column + " " + op_to_sql(pred.op) + " ?";
-        // Store a copy of the binder - pred is owned by SelectSpec
-        cq << [&binder = pred.binder](engine::SqliteStatement& stmt, i32 idx)
-        {
-            binder(stmt, idx);
-        };
+        s += pred.column + " " + std::string(toSql(pred.op)) + " ?";
         first = false;
     }
     return s;
@@ -103,7 +85,7 @@ static std::string op_to_sql(Compare op)
     return s;
 }
 
-void build_select(const SelectSpec& spec, CompiledQuery& cq)
+void build_select(const SelectSpec& spec, CompiledShape& cq)
 {
     cq << "SELECT ";
     cq << projection_sql(spec.projection);
@@ -123,10 +105,99 @@ void build_select(const SelectSpec& spec, CompiledQuery& cq)
     cq << ";";
 }
 
-[[nodiscard]] CompiledQuery compile(const SelectSpec& spec)
+[[nodiscard]] CompiledShape compile(const SelectSpec& spec)
 {
-    CompiledQuery cq;
+    CompiledShape cq;
     build_select(spec, cq);
     return cq;
 }
+
+// -----------------------------------------------------------------------
+// compile(InsertSpec) -> CompiledShape
+//
+// Emits: INSERT [OR REPLACE] INTO <table> (<c1>, <c2>, ...) VALUES (?, ?, ...)
+// -----------------------------------------------------------------------
+[[nodiscard]] CompiledShape compile(const InsertSpec& spec)
+{
+    CompiledShape cq;
+
+    cq << (spec.or_replace ? "INSERT OR REPLACE INTO " : "INSERT INTO ");
+    cq << spec.table;
+    cq << " (";
+
+    for (std::size_t i = 0; i < spec.assignments.size(); ++i) {
+        if (i > 0) cq << ", ";
+        cq << spec.assignments[i].column;
+    }
+
+    cq << ") VALUES (";
+
+    for (std::size_t i = 0; i < spec.assignments.size(); ++i) {
+        if (i > 0) cq << ", ";
+        cq << "?";
+    }
+
+    cq << ");";
+    return cq;
+}
+
+// -----------------------------------------------------------------------
+// compile(UpdateSpec) -> CompiledShape
+//
+// Emits: UPDATE <table> SET <c1>=?, <c2>=?, ... WHERE <pk1>=?, ...
+// -----------------------------------------------------------------------
+[[nodiscard]] CompiledShape compile(const UpdateSpec& spec)
+{
+    CompiledShape cq;
+
+    cq << "UPDATE ";
+    cq << spec.table;
+    cq << " SET ";
+
+    for (std::size_t i = 0; i < spec.assignments.size(); ++i) {
+        if (i > 0) cq << ", ";
+        cq << spec.assignments[i].column;
+        cq << " = ?";
+    }
+
+    if (!spec.where.empty()) {
+        cq << " WHERE ";
+        for (std::size_t i = 0; i < spec.where.size(); ++i) {
+            if (i > 0) cq << " AND ";
+            cq << spec.where[i].column;
+            cq << toSql(spec.where[i].op);   // existing helper used by SELECT compile()
+            cq << "?";
+        }
+    }
+
+    cq << ";";
+    return cq;
+}
+
+// -----------------------------------------------------------------------
+// compile(DeleteSpec) -> CompiledShape
+//
+// Emits: DELETE FROM <table> WHERE <pk1>=?, ...
+// -----------------------------------------------------------------------
+[[nodiscard]] CompiledShape compile(const DeleteSpec& spec)
+{
+    CompiledShape cq;
+
+    cq << "DELETE FROM ";
+    cq << spec.table;
+
+    if (!spec.where.empty()) {
+        cq << " WHERE ";
+        for (std::size_t i = 0; i < spec.where.size(); ++i) {
+            if (i > 0) cq << " AND ";
+            cq << spec.where[i].column;
+            cq << toSql(spec.where[i].op);
+            cq << "?";
+        }
+    }
+
+    cq << ";";
+    return cq;
+}
+
 } // namespace tewi::ast

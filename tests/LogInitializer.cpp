@@ -29,10 +29,7 @@ public:
             };
 
             // Forward Tewi's log messages to the console with a simple format.
-            std::string_view level_str = getLevelString(level);
-            std::cout << "[" << level_str << "] "
-                      << loc.file_name() << ":" << loc.line() << " - "
-                      << msg << std::endl;
+            std::println(std::cout, "[{}] {}:{} - {}", getLevelString(level), loc.file_name(), loc.line(), msg);
         });
     }
 

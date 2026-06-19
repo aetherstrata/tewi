@@ -1,11 +1,11 @@
 // ============================================================================
-// SqliteRenderer.ixx  -  tewi:select_renderer
+// SqliteRenderer.ixx  -  tewi:ast_renderer
 //
-// The single place that turns a SelectSpec into a SQL string + bindings.
-// No query class, no Table, no Column ever calls string concatenation again.
+// The single place that turns a Spec into a SQL string + bindings.
 // ============================================================================
-module tewi:select_renderer;
+module tewi:ast_renderer;
 
+import :ast_compiled;
 import :ast_spec;
 import :compare;
 import :order;
@@ -14,11 +14,8 @@ import std;
 
 namespace tewi::ast
 {
-[[nodiscard]] CompiledQuery compile(const SelectSpec& spec);
-
-/// Convenience: compile a spec and return just the SQL string (for tests/logging).
-[[nodiscard]] inline std::string to_sql(const SelectSpec& spec)
-{
-    return compile(spec).str();
-}
+[[nodiscard]] CompiledShape compile(const SelectSpec& spec);
+[[nodiscard]] CompiledShape compile(const InsertSpec& spec);
+[[nodiscard]] CompiledShape compile(const DeleteSpec& spec);
+[[nodiscard]] CompiledShape compile(const UpdateSpec& spec);
 } // namespace tewi::ast

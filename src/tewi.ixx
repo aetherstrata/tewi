@@ -16,6 +16,8 @@ export import :contraints;
 export import :index;
 export import :table;
 
+export import :table_helpers;
+
 export import :repository;
 export import :orm_database;
 export import :registry;

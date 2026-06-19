@@ -8,11 +8,12 @@
 export module tewi:basic_query;
 
 import :ast_spec;
-import :select_renderer;
+import :ast_renderer;
+import :ast_compiled;
 import :row_hydrator;
 import :sqlite_connection;
 import :sqlite_statement;
-import :table;
+import :table_helpers;
 import :registry;
 import :member_traits;
 import :fk_helpers;
@@ -398,11 +399,11 @@ public:
 
         Iterator() = default;
 
-        Iterator(engine::SqliteConnection& db, ast::CompiledQuery cq, THydrator hydrator)
+        Iterator(engine::SqliteConnection& db, ast::CompiledShape cq, ast::BoundParams params, THydrator hydrator)
             : _stmt(std::make_shared<engine::SqliteStatement>(db.handle(), cq.str()))
             , _hydrator(std::move(hydrator))
         {
-            cq.bind(*_stmt);
+            params.bind(*_stmt);
             fetch();
         }
 
@@ -448,14 +449,15 @@ public:
 private:
     engine::SqliteConnection& _db;
     ast::SelectSpec _spec;
+    ast::BoundParams _params;
     THydrator _hydrator{};
 
     // Compile and prepare the statement in one step.
-    [[nodiscard]] std::pair<engine::SqliteStatement, ast::CompiledQuery> prepare() const
+    [[nodiscard]] std::pair<engine::SqliteStatement, ast::CompiledShape> prepare() const
     {
         auto cq   = ast::compile(_spec);
         auto stmt = _db.prepare(cq.str());
-        cq.bind(stmt);
+        _params.bind(stmt);
         return {std::move(stmt), std::move(cq)};
     }
 
@@ -471,11 +473,11 @@ private:
 
         _spec.where.emplace_back(ast::PredicateNode {
             .column = std::string(col),
-            .op     = op,
-            .binder = [captured](engine::SqliteStatement& stmt, i32 idx)
-            {
-                SqliteTypeAdapter<RV>::bind(stmt, idx, captured);
-            }
+            .op     = op
+        });
+        _params.push([v = std::move(captured)](engine::SqliteStatement& s, i32 idx)
+        {
+            SqliteTypeAdapter<RV>::bind(s, idx, v);
         });
         return std::move(*this);
     }

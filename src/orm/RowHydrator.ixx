@@ -1,6 +1,6 @@
 module tewi:row_hydrator;
 
-import :table;
+import :table_helpers;
 import :member_traits;
 import :type_adapter;
 import :sqlite_statement;

@@ -9,6 +9,8 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(Catch2)
 list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
 
+set(TEWI_ENABLE_TRACE ON)
+
 add_executable(${PROJECT_NAME}_tests
         ColumnSchemaTests.cpp
         PrimaryKeyTests.cpp

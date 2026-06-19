@@ -40,18 +40,21 @@ SqliteStatement::SqliteStatement(sqlite3* db, std::string_view sql)
 SqliteStatement& SqliteStatement::bind(const i32 idx, const i32 val)
 {
     check(sqlite3_bind_int(_stmt.get(), idx, val), "bind i32");
+    LOG_TRACE("Bound i32 value {} at index {}", val, idx);
     return *this;
 }
 
 SqliteStatement& SqliteStatement::bind(const i32 idx, const i64 val)
 {
     check(sqlite3_bind_int64(_stmt.get(), idx, val), "bind int64");
+    LOG_TRACE("Bound i64 value {} at index {}", val, idx);
     return *this;
 }
 
 SqliteStatement& SqliteStatement::bind(const i32 idx, const f64 val)
 {
     check(sqlite3_bind_double(_stmt.get(), idx, val), "bind f64");
+    LOG_TRACE("Bound f64 value {} at index {}", val, idx);
     return *this;
 }
 
@@ -60,6 +63,7 @@ SqliteStatement& SqliteStatement::bind(const i32 idx, const std::string_view val
     check(sqlite3_bind_text(_stmt.get(), idx, val.data(), static_cast<i32>(val.size()),
                             SQLITE_TRANSIENT),
           "bind text");
+    LOG_TRACE("Bound text value \"{}\" at index {}", val, idx);
     return *this;
 }
 
@@ -68,12 +72,14 @@ SqliteStatement& SqliteStatement::bind(const i32 idx, const std::span<const std:
     check(sqlite3_bind_blob(_stmt.get(), idx, val.data(), static_cast<i32>(val.size_bytes()),
                             SQLITE_TRANSIENT),
           "bind blob");
+    LOG_TRACE("Bound blob value of {} bytes at index {}", val.size_bytes(), idx);
     return *this;
 }
 
 SqliteStatement& SqliteStatement::bind(const i32 idx, std::nullptr_t)
 {
     check(sqlite3_bind_null(_stmt.get(), idx), "bind null");
+    LOG_TRACE("Bound NULL value at index {}", idx);
     return *this;
 }
 
