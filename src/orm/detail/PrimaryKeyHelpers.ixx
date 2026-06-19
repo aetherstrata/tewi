@@ -22,24 +22,15 @@ template <typename PK>
 constexpr bool isPrimaryKey = is_primary_key<PK>::value;
 
 template <typename PK>
-struct is_primary_key_autoincrement : std::false_type
+struct is_pk_autoincrement : std::false_type
 {};
 
 template <>
-struct is_primary_key_autoincrement<PrimaryKey<true>> : std::true_type
+struct is_pk_autoincrement<PrimaryKey<true>> : std::true_type
 {};
 
 template <typename PK>
-constexpr bool isAutoincrementPK = is_primary_key_autoincrement<PK>::value;
-
-template <typename T, typename Tuple>
-struct tuple_prepend;
-
-template <typename T, typename... Ts>
-struct tuple_prepend<T, std::tuple<Ts...>>
-{
-    using type = std::tuple<T, Ts...>;
-};
+constexpr bool isAutoincrementPK = is_pk_autoincrement<PK>::value;
 
 template <typename... Cols>
 struct primary_key_tuple
