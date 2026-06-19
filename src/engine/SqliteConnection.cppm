@@ -60,4 +60,17 @@ i64 SqliteConnection::lastInsertRowId() const noexcept
 {
     return sqlite3_last_insert_rowid(_db.get());
 }
+
+i32 SqliteConnection::schemaVersion() const
+{
+    i32 dbVersion = 0;
+    if (auto stmt = const_cast<SqliteConnection*>(this)->prepare("PRAGMA user_version;"); stmt.step())
+    {
+        dbVersion = stmt.columnInt(0);
+    }
+
+    if (dbVersion <= 0) throw SqliteError("Failed to read database version");
+
+    return dbVersion;
+}
 } // namespace tewi::engine

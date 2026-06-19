@@ -83,4 +83,4 @@ private:
     SqliteConnection& _db;     ///< Reference to the owning database connection.
     bool _committed = false; ///< Set to @c true once @c Commit() or @c Rollback() has been called.
 };
-} // namespace tewi
+} // namespace tewi::engine

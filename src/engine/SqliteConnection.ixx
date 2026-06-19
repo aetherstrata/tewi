@@ -178,6 +178,13 @@ public:
      */
     [[nodiscard]] i64 lastInsertRowId() const noexcept;
 
+    /**
+     * @brief Get the schema version for this database.
+     *
+     * @return Returns the current schema version of the database, as set by `PRAGMA user_version`.
+     */
+    [[nodiscard]] i32 schemaVersion() const;
+
 private:
     /**
      * @brief Custom deleter for the @c unique_ptr holding @c sqlite3*.
@@ -213,4 +220,4 @@ private:
  *       the database connection is closed.
  */
 export inline SqliteConnection InMemory() { return SqliteConnection{":memory:"}; }
-} // namespace tewi
+} // namespace tewi::engine

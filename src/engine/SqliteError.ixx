@@ -47,4 +47,4 @@ public:
 private:
     int code_; ///< SQLite result code stored for programmatic inspection.
 };
-} // namespace tewi
+} // namespace tewi::engine

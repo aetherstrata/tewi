@@ -11,46 +11,50 @@ import std;
 
 namespace tewi::engine
 {
-static constexpr std::array migrations{
-    Migration{.version = 1, .sql = R"(
-        CREATE TABLE test_cases (
-            id            INTEGER PRIMARY KEY AUTOINCREMENT,
-            family_id     INTEGER NOT NULL,
-            name          TEXT    NOT NULL,
-            description   TEXT    NOT NULL DEFAULT '',
-            last_run_date TEXT,
-            test_input    TEXT    NOT NULL DEFAULT '',
-            test_output   TEXT    NOT NULL DEFAULT '',
-            status        TEXT    NOT NULL DEFAULT 'not_executed'
-        );
-    )"},
-};
-void runMigrations(SqliteConnection& database)
+/**
+ * @brief Returns a vector of indices representing the migrations sorted by ascending version.
+ * 
+ * @param migrations A span of Migration objects.
+ * @return std::vector<usize> The sorted indices.
+ */
+std::vector<usize> getSortedMigrationIndices(std::span<const Migration> migrations)
 {
-    int dbVersion = 0;
-    if (auto stmt = database.prepare("PRAGMA user_version;"); stmt.step())
-    {
-        dbVersion = stmt.columnInt(0);
-    }
+    std::vector<usize> indices(migrations.size());
 
-    if (dbVersion <= 0) throw SqliteError("Failed to read database version");
+    //  0, 1, 2, ...
+    std::iota(indices.begin(), indices.end(), 0);
+
+    // Sort the indices based on the 'version' field of the corresponding Migration objects
+    std::ranges::sort(indices, [&migrations](usize a, usize b)
+    {
+        return migrations[a].version < migrations[b].version;
+    });
+
+    return indices;
+}
+
+void runMigrations(SqliteConnection& database, const std::span<const Migration> migrations)
+{
+    int dbVersion = database.schemaVersion();
 
     LOG_DBG("Current database version: {}", dbVersion);
     LOG_DBG("Checking for migrations...");
 
-    for (const auto& migration : migrations)
+    for (const usize i : getSortedMigrationIndices(migrations))
     {
-        // Nothing to do if the database is already at or above this version
-        if (migration.version <= dbVersion) continue;
+        const auto& [version, sql] = migrations[i];
 
-        LOG_INFO("Applying DB migration to version {}...", migration.version);
+        // Nothing to do if the database is already at or above this version
+        if (version <= dbVersion) continue;
+
+        LOG_INFO("Applying DB migration to version {}...", version);
 
         // Each migration is atomic. Partial application is never committed
         auto txn = database.beginTransaction();
-        database.exec(migration.sql);
+        database.exec(sql);
 
         // Update the version inside the same transaction
-        database.exec(std::format("PRAGMA user_version = {};", migration.version));
+        database.exec(std::format("PRAGMA user_version = {};", version));
 
         txn.commit();
     }

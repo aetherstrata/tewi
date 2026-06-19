@@ -359,4 +359,4 @@ private:
     /// Owned compiled statement handle
     std::unique_ptr<sqlite3_stmt, Finalizer> _stmt;
 };
-} // namespace tewi
+} // namespace tewi::engine

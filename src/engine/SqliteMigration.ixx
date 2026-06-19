@@ -34,8 +34,9 @@ export struct Migration
  * that the next run skips already-applied steps.
  *
  * @param[in] database  Open database to migrate.
+ * @param[in] migrations The migrations to apply to the database
  *
  * @throws SqliteError if any migration SQL fails.
  */
-export void runMigrations(SqliteConnection& database);
-} // namespace tewi
+export void runMigrations(SqliteConnection& database, std::span<const Migration> migration);
+} // namespace tewi::engine
