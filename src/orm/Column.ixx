@@ -17,8 +17,8 @@ export namespace tewi
 /// @tparam MP  Pointer-to-member of the mapped C++ field.
 /// @tparam Cs      Zero or more constraint tags.
 template <FixedString name, auto MP, typename... Cs>
-requires detail::ForeignKeyHasSameType<typename detail::member_ptr<decltype(MP)>::FieldType, Cs...>
-    && std::is_default_constructible_v<typename detail::member_ptr<decltype(MP)>::FieldType>
+requires detail::ForeignKeyHasSameType<detail::FieldOf<MP>, Cs...>
+    && std::is_default_constructible_v<detail::FieldOf<MP>>
 struct Column
 {
 private:
@@ -66,16 +66,4 @@ public:
 template <typename... Is>
 struct Columns
 {};
-
-namespace detail
-{
-template <typename T>
-struct is_column : std::false_type {};
-
-template <FixedString name, auto MP, typename... Cs>
-struct is_column<Column<name, MP, Cs...>> : std::true_type {};
-} // namespace detail
-
-template <typename T>
-concept IsColumn = detail::is_column<T>::value;
 } // namespace tewi

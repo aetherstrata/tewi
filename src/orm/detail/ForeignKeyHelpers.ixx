@@ -74,55 +74,6 @@ struct FindFkTo<TargetTable, First, Rest...>
         typename FindFkTo<TargetTable, Rest...>::type>;
 };
 
-// Concept: TableType has a FK column pointing to TargetTable
-template <typename TableType, typename TargetTable>
-concept HasFkTo = !std::is_void_v<typename TableType::template FkTo<TargetTable>>;
-
-// -----------------------------------------------------------------------
-//  Given a FK Column type, extract the referenced column name.
-//  Walks the Column's constraints to find the ForeignKey<> tag.
-// -----------------------------------------------------------------------
-template <typename FkCol, typename TargetTable>
-consteval std::string_view fk_referenced_col_name()
-{
-    std::string_view result{};
-    [&]<typename... Cs>(std::tuple<Cs...>*)
-    {
-        ([&]<typename C>()
-        {
-            if constexpr (IsFkTo<C, TargetTable>::value)
-            {
-                result = TargetTable::template ColumnOf<C::member>::columnName;
-            }
-        }.template operator()<Cs>(), ...);
-    }(static_cast<FkCol::Constraints*>(nullptr));
-    return result;
-}
-
-// Called only when LT has a FK pointing to RT.
-template <typename LT, typename RT>
-requires HasFkTo<LT, RT>
-consteval auto resolve_fk_forward()
-{
-    using FK = LT::template FkTo<RT>;
-    return std::pair<std::string_view, std::string_view>{
-        FK::columnName,
-        fk_referenced_col_name<FK, RT>()
-    };
-}
-
-// Called only when RT has a FK pointing to LT.
-template <typename LT, typename RT>
-requires HasFkTo<RT, LT>
-consteval auto resolve_fk_reverse()
-{
-    using FK = RT::template FkTo<LT>;
-    return std::pair<std::string_view, std::string_view>{
-        fk_referenced_col_name<FK, LT>(),
-        FK::columnName
-    };
-}
-
 template <typename T, typename... Cs>
 consteval bool fk_has_same_type()
 {

@@ -4,9 +4,25 @@ import :column;
 
 import std;
 
-namespace tewi::detail
+namespace tewi
 {
-template <IsColumn First, IsColumn... Rest>
+namespace detail
+{
+template <typename T>
+struct is_column : std::false_type
+{};
+
+template <FixedString name, auto MP, typename... Cs>
+struct is_column<Column<name, MP, Cs...>> : std::true_type
+{};
+} // namespace detail
+
+template <typename T>
+concept IColumn = detail::is_column<T>::value;
+
+namespace detail
+{
+template <IColumn First, IColumn... Rest>
 consteval bool unique_column_names()
 {
     if constexpr (sizeof...(Rest) > 0)
@@ -19,4 +35,5 @@ consteval bool unique_column_names()
 
 template <typename... Cols>
 concept UniqueColumnNames = unique_column_names<Cols...>();
-} // namespace tewi::detail
+} // namespace detail
+} // namespace tewi
