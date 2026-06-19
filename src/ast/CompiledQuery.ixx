@@ -14,6 +14,10 @@ namespace tewi::ast
 /// Contains no runtime values — safe to cache and reuse indefinitely.
 struct CompiledShape
 {
+    CompiledShape() = default;
+
+    CompiledShape(std::ostringstream ss) : sql(std::move(ss)) {}
+
     [[nodiscard]] std::string str() const { return sql.str(); }
 
     void operator<<(std::string_view s) { sql << s; }

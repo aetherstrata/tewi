@@ -336,7 +336,7 @@ public:
     // ----------------------------------------------------------------
     [[nodiscard]] std::vector<TResult> toVector() const
     {
-        auto [stmt, cq] = prepare();
+        auto stmt = prepare();
         std::vector<TResult> out;
         while (stmt.step()) out.emplace_back(_hydrator(stmt, 0));
         return out;
@@ -348,7 +348,7 @@ public:
     [[nodiscard]] std::optional<TResult> firstOrDefault()
     {
         _spec.limit = 1;
-        auto [stmt, cq] = prepare();
+        auto stmt = prepare();
         if (!stmt.step()) return std::nullopt;
         return _hydrator(stmt, 0);
     }
@@ -363,10 +363,6 @@ public:
 
     // ----------------------------------------------------------------
     // count() - count rows matching an existing BasicQuery's filters
-    //
-    // Usage:
-    //   auto q = db.from<User>().where<&User::active>(true);
-    //   i64 n = repo.countWhere(q);
     // ----------------------------------------------------------------
     [[nodiscard]] i64 count()
     {
@@ -377,7 +373,7 @@ public:
         _spec.limit.reset();
         _spec.offset.reset();
 
-        auto [stmt, cq] = prepare();
+        auto stmt = prepare();
         if (!stmt.step()) return 0;
         return SqliteTypeAdapter<i64>::read(stmt, 0);
     }
@@ -385,8 +381,7 @@ public:
     // ----------------------------------------------------------------
     // Lazy range: begin / end
     // ----------------------------------------------------------------
-    struct Sentinel
-    {};
+    struct Sentinel {};
 
     class Iterator
     {
@@ -435,8 +430,7 @@ public:
 
     [[nodiscard]] Iterator begin() const
     {
-        auto cq = ast::compile(_spec);
-        return Iterator(_db, std::move(cq), _hydrator);
+        return Iterator(_db, ast::compile(_spec), _hydrator);
     }
 
     [[nodiscard]] Sentinel end() const noexcept { return {}; }
@@ -453,12 +447,12 @@ private:
     THydrator _hydrator{};
 
     // Compile and prepare the statement in one step.
-    [[nodiscard]] std::pair<engine::SqliteStatement, ast::CompiledShape> prepare() const
+    [[nodiscard]] engine::SqliteStatement prepare() const
     {
         auto cq   = ast::compile(_spec);
         auto stmt = _db.prepare(cq.str());
         _params.bind(stmt);
-        return {std::move(stmt), std::move(cq)};
+        return std::move(stmt);
     }
 
     // Append a typed predicate to the spec.
@@ -491,9 +485,8 @@ private:
         {
             std::apply([&](auto... col_tags)
             {
-                ([&](auto col_tag)
+                ([&]<typename ColType>(ColType col_tag)
                 {
-                    using ColType = decltype(col_tag);
                     if constexpr (std::is_same_v<decltype(ColType::member), Field Obj::*>)
                     {
                         if (ColType::member == mp)

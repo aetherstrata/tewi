@@ -37,8 +37,7 @@ namespace tewi::ast
 // -----------------------------------------------------------------------
 // WHERE clause - also fills CompiledShape._binders
 // -----------------------------------------------------------------------
-[[nodiscard]] static std::string where_sql(const std::vector<PredicateNode>& preds,
-                                           CompiledShape& cq)
+[[nodiscard]] static std::string where_sql(const std::vector<PredicateNode>& preds)
 {
     std::string s = " WHERE ";
     bool first    = true;
@@ -61,7 +60,7 @@ namespace tewi::ast
     for (const auto& [col, dir] : orders)
     {
         if (!first) s += ", ";
-        s     += col + (dir == Order::DESC ? " DESC" : " ASC");
+        s     += col + " " + std::string(toSql(dir));
         first  = false;
     }
     return s;
@@ -85,30 +84,34 @@ namespace tewi::ast
     return s;
 }
 
-void build_select(const SelectSpec& spec, CompiledShape& cq)
+[[nodiscard]] static std::string build_select(const SelectSpec& spec)
 {
-    cq << "SELECT ";
-    cq << projection_sql(spec.projection);
-    cq << " FROM ";
-    cq << spec.from.name;
+    std::ostringstream ss;
 
-    for (const auto& join : spec.joins) cq << join_sql(join);
+    ss << "SELECT ";
+    ss << projection_sql(spec.projection);
+    ss << " FROM ";
+    ss << spec.from.name;
 
-    if (!spec.where.empty()) cq << where_sql(spec.where, cq);
+    for (const auto& join : spec.joins) ss << join_sql(join);
 
-    if (!spec.order_by.empty()) cq << order_sql(spec.order_by);
+    if (!spec.where.empty()) ss << where_sql(spec.where);
 
-    if (spec.limit) cq << " LIMIT " + std::to_string(*spec.limit);
+    if (!spec.order_by.empty()) ss << order_sql(spec.order_by);
 
-    if (spec.offset) cq << " OFFSET " + std::to_string(*spec.offset);
+    if (spec.limit) ss << " LIMIT " + std::to_string(*spec.limit);
 
-    cq << ";";
+    if (spec.offset) ss << " OFFSET " + std::to_string(*spec.offset);
+
+    ss << ";";
+
+    return ss.str();
 }
 
 [[nodiscard]] CompiledShape compile(const SelectSpec& spec)
 {
     CompiledShape cq;
-    build_select(spec, cq);
+    cq << build_select(spec);
     return cq;
 }
 
