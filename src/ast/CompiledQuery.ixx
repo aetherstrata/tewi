@@ -14,16 +14,12 @@ namespace tewi::ast
 /// Contains no runtime values — safe to cache and reuse indefinitely.
 struct CompiledShape
 {
-    CompiledShape() = default;
+    CompiledShape(std::string s) : sqlString(std::move(s)) {}
 
-    CompiledShape(std::ostringstream ss) : sql(std::move(ss)) {}
-
-    [[nodiscard]] std::string str() const { return sql.str(); }
-
-    void operator<<(std::string_view s) { sql << s; }
+    [[nodiscard]] const std::string& sql() const { return sqlString; }
 
 private:
-    std::ostringstream sql;
+    std::string sqlString;
 };
 
 /// A sequence of parameter binders, produced fresh for each execution.
@@ -31,16 +27,15 @@ private:
 /// and the params rebuilt cheaply per row/invocation.
 struct BoundParams
 {
-    using Binder = std::move_only_function<void(engine::SqliteStatement&, i32) const>;
+    using Binder = std::move_only_function<void(engine::SqliteStatement&) const>;
 
-    std::vector<Binder> binders;
+    std::unordered_map<std::string, Binder> binders;
 
     void bind(engine::SqliteStatement& stmt) const
     {
-        i32 idx = 1;
-        for (const auto& b : binders) b(stmt, idx++);
+        for (const auto& b : binders | std::views::values) b(stmt);
     }
 
-    void push(Binder b) { binders.emplace_back(std::move(b)); }
+    void push(std::string_view name, Binder b) { binders.emplace(std::string(name), std::move(b)); }
 };
 } // namespace tewi::ast

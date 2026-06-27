@@ -28,8 +28,8 @@ class Repository
 {
     using RowType = TableType::RowType;
     using KeyType = TableType::KeyType;
-public:
 
+public:
     explicit Repository(engine::SqliteConnection& db) noexcept
         : _db(db)
     {}
@@ -48,7 +48,7 @@ public:
     // findBy<MemberPtr>(value) – find first matching row
     // ----------------------------------------------------------------
     template <auto MemberPtr, typename V>
-    [[nodiscard]] std::optional<RowType> findBy(V&& value) const
+    [[nodiscard]] std::optional<RowType> find(V&& value) const
     {
         return query().template where<MemberPtr>(std::forward<V>(value)).limit(1).firstOrDefault();
     }
@@ -64,7 +64,7 @@ public:
         spec.projection = {.kind = ast::ProjectionKind::CountStar};
 
         auto cq   = ast::compile(spec);
-        auto stmt = _db.prepare(cq.str());
+        auto stmt = _db.prepare(cq.sql());
         // No WHERE bindings needed for a plain count
         if (!stmt.step()) return 0;
         return SqliteTypeAdapter<i64>::read(stmt, 0);
@@ -73,10 +73,11 @@ public:
     // ----------------------------------------------------------------
     // insert() – INSERT OR REPLACE (single row)
     // ----------------------------------------------------------------
-    [[nodiscard]] i64 insert(const RowType& obj) const {
-        auto cq   = ast::compile(build_insert_spec());
-        auto stmt = _db.prepare(cq.str());
-        build_insert_params(obj).bind(stmt);
+    [[nodiscard]] i64 insert(const RowType& obj) const
+    {
+        auto [shape, params] = build_insert(obj);
+        auto stmt = _db.prepare(ast::compile(shape).sql());
+        params.bind(stmt);
         stmt.exec();
         return _db.lastInsertRowId();
     }
@@ -88,16 +89,11 @@ public:
     {
         if (rows.empty()) return;
 
-        // Compile the SQL shape once — no values involved.
-        const ast::CompiledShape shape = ast::compile(build_insert_spec());
         auto txn = _db.beginTransaction();
 
-        for (const auto& row : rows) {
-            // Produce only the bindings — cheap, no string work.
-            ast::BoundParams params = build_insert_params(row);
-            auto stmt = _db.prepare(shape.str());
-            params.bind(stmt);
-            stmt.exec();
+        for (const auto& row : rows)
+        {
+            insert(row);
         }
         txn.commit();
     }
@@ -105,20 +101,22 @@ public:
     // ----------------------------------------------------------------
     // update() – UPDATE by primary key
     // ----------------------------------------------------------------
-    void update(const RowType& obj) const {
-        auto cq   = ast::compile(build_update_spec(obj));
-        auto stmt = _db.prepare(cq.str());
-        build_update_params(obj).bind(stmt);
-        stmt.step();
+    void update(const RowType& obj) const
+    {
+        auto [shape, params] = build_update(obj);
+        auto stmt = _db.prepare(ast::compile(shape).sql());
+        params.bind(stmt);
+        stmt.exec();
     }
 
     // ----------------------------------------------------------------
     // erase() – DELETE by primary key (variadic composite key)
     // ----------------------------------------------------------------
     template <typename... PKValues>
-    requires (sizeof...(PKValues) > 1)
-    void erase(PKValues&&... pk_values) const {
-        erase(std::make_tuple(std::forward<PKValues>(pk_values)...));
+    requires(sizeof...(PKValues) > 1)
+    void erase(PKValues&&... pk_values) const
+    {
+        erase(KeyType{std::forward<PKValues>(pk_values)...});
     }
 
     // ----------------------------------------------------------------
@@ -126,9 +124,10 @@ public:
     // ----------------------------------------------------------------
     void erase(KeyType key) const
     {
-        auto cq   = ast::compile(build_delete_spec_from_key());
-        auto stmt = _db.prepare(cq.str());
-        build_delete_params(key).bind(stmt);
+        auto [spec, params] = build_delete(key);
+        auto cq   = ast::compile(spec);
+        auto stmt = _db.prepare(cq.sql());
+        params.bind(stmt);
         stmt.step();
     }
 
@@ -137,9 +136,10 @@ public:
     // ----------------------------------------------------------------
     void erase(const RowType& obj) const
     {
-        auto cq   = ast::compile(build_delete_spec_from_row());
-        auto stmt = _db.prepare(cq.str());
-        build_delete_params(obj).bind(stmt);
+        auto [spec, params] = build_delete(obj);
+        auto cq   = ast::compile(spec);
+        auto stmt = _db.prepare(cq.sql());
+        params.bind(stmt);
         stmt.step();
     }
 
@@ -158,201 +158,170 @@ private:
     // INSERT OR REPLACE INTO <table> (<col>, ...) VALUES (?, ...)
     // ----------------------------------------------------------------
     // Shape: column names only, no values
-    [[nodiscard]] static ast::InsertSpec build_insert_spec()
+    [[nodiscard]] static std::pair<ast::InsertSpec, ast::BoundParams>
+    build_insert(const RowType& obj)
     {
-        ast::InsertSpec spec;
+        ast::InsertSpec  spec;
+        ast::BoundParams params;
         spec.table      = TableType::tableName;
         spec.or_replace = true;
-        std::apply([&](auto... col_tags)
-        {
-            ([&]<typename ColType>(ColType col_tag)
-            {
-                spec.assignments.emplace_back(
-                    ast::AssignmentNode{ .column = std::string(ColType::columnName) }
-                );
-            }(col_tags), ...);
-        }, typename TableType::ColumnsTuple{});
-        return spec;
-    }
 
-    // Bindings: values only, no SQL
-    [[nodiscard]] static ast::BoundParams build_insert_params(const RowType& obj)
-    {
-        ast::BoundParams params;
+        i32 counter = 1;
         std::apply([&](auto... col_tags)
         {
             ([&]<typename ColType>(ColType col_tag)
             {
                 using FT = ColType::FieldType;
-                params.push([val = obj.*(ColType::member)](engine::SqliteStatement& s, i32 idx)
-                {
-                    SqliteTypeAdapter<FT>::bind(s, idx, val);
-                });
+                std::string name = std::to_string(counter);
+                spec.assignments.emplace_back(std::string(ColType::columnName), name);
+                params.push(name,
+                    [val = obj.*(ColType::member), counter](engine::SqliteStatement& s)
+                    {
+                        SqliteTypeAdapter<FT>::bind(s, counter, val);
+                    });
+                counter++;
             }(col_tags), ...);
         }, typename TableType::ColumnsTuple{});
-        return params;
+
+        return {std::move(spec), std::move(params)};
     }
 
-    // ----------------------------------------------------------------
-    // UPDATE <table> SET col=?, ... WHERE <pk_col>=?, ...
-    //
-    // Non-PK columns → assignments (SET clause).
-    // PK columns     → where predicates (WHERE clause).
-    // ----------------------------------------------------------------
-    [[nodiscard]] static ast::UpdateSpec build_update_spec(const RowType& obj)
+    [[nodiscard]] static std::pair<ast::UpdateSpec, ast::BoundParams>
+    build_update(const RowType& obj)
     {
-        ast::UpdateSpec spec;
+        ast::UpdateSpec  spec;
+        ast::BoundParams params;
         spec.table = TableType::tableName;
 
+        i32 counter = 1;
+        auto add = [&]<typename ColType>(ColType col_tag, bool is_pk)
+        {
+            using FT      = ColType::FieldType;
+            auto  slot    = counter; // captured integer
+            auto  name    = std::to_string(counter++);
+
+            if (!is_pk)
+            {
+                spec.assignments.emplace_back(
+                    ast::AssignmentNode{.column = std::string(ColType::columnName),
+                                        .param_name = name});
+            } else
+            {
+                spec.where.emplace_back(
+                    ast::PredicateNode{.column = std::string(ColType::columnName),
+                                       .op     = Compare::Equal,
+                                       .param_name = name});
+            }
+            params.push(name,
+                [val = obj.*(ColType::member), slot]
+                (engine::SqliteStatement& s) {
+                    SqliteTypeAdapter<FT>::bind(s, slot, val);
+                });
+        };
+
+        // SET columns first (non-PK), then WHERE columns (PK) -
+        // order is now explicit and documented, not implicit.
         std::apply([&](auto... col_tags)
         {
             ([&]<typename ColType>(ColType col_tag)
             {
-                using FT =  ColType::FieldType;
-                if constexpr (ColType::isPrimaryKey)
-                {
-                    spec.where.emplace_back(ast::PredicateNode{
-                        .column = std::string(ColType::columnName),
-                        .op     = Compare::Equal,
-                    });
-                }
-                else
-                {
-                    spec.assignments.emplace_back(ast::AssignmentNode{
-                        .column = std::string(ColType::columnName),
-                    });
-                }
+                if constexpr (!ColType::isPrimaryKey) add(col_tag, false);
+            }(col_tags), ...);
+            ([&]<typename ColType>(ColType col_tag)
+            {
+                if constexpr (ColType::isPrimaryKey)  add(col_tag, true);
             }(col_tags), ...);
         }, typename TableType::ColumnsTuple{});
 
-        return spec;
-    }
-
-    [[nodiscard]] static ast::BoundParams build_update_params(const RowType& obj)
-    {
-        ast::BoundParams params;
-        std::apply([&](auto... col_tags)
-        {
-            ([&]<typename ColType>(ColType col_tag)
-            {
-                using FT = ColType::FieldType;
-                if constexpr (!ColType::isPrimaryKey)
-                {
-                    params.push([val = obj.*(ColType::member)](engine::SqliteStatement& s, i32 idx)
-                    {
-                        SqliteTypeAdapter<FT>::bind(s, idx, val);
-                    });
-                }
-            }(col_tags), ...);
-
-            ([&]<typename ColType>(ColType col_tag)
-            {
-                using FT = ColType::FieldType;
-                if constexpr (ColType::isPrimaryKey)
-                {
-                    params.push([val = obj.*(ColType::member)](engine::SqliteStatement& s, i32 idx)
-                    {
-                        SqliteTypeAdapter<FT>::bind(s, idx, val);
-                    });
-                }
-            }(col_tags), ...);
-        }, typename TableType::ColumnsTuple{});
-        return params;
+        return {std::move(spec), std::move(params)};
     }
 
     // ----------------------------------------------------------------
     // DELETE FROM <table> WHERE <pk_col>=?, ...  (from KeyType value)
     // ----------------------------------------------------------------
-    [[nodiscard]] static ast::DeleteSpec build_delete_spec_from_key()
+    [[nodiscard]] static std::pair<ast::DeleteSpec, ast::BoundParams>
+    build_delete(const RowType& obj)
     {
-        ast::DeleteSpec spec;
+        ast::DeleteSpec  spec;
+        ast::BoundParams params;
         spec.table = TableType::tableName;
 
-        std::apply([&](auto... col_tags)
-        {
-            ([&]<typename ColType>(ColType col_tag)
-            {
-                spec.where.emplace_back(ast::PredicateNode{
-                    .column = std::string(ColType::columnName),
-                    .op     = Compare::Equal,
-                });
-            }(col_tags), ...);
-        }, typename TableType::KeyTuple{});
-
-        return spec;
-    }
-
-    // ----------------------------------------------------------------
-    // DELETE FROM <table> WHERE <pk_col>=?, ...  (from RowType object)
-    // ----------------------------------------------------------------
-    [[nodiscard]] static ast::DeleteSpec build_delete_spec_from_row()
-    {
-        ast::DeleteSpec spec;
-        spec.table = TableType::tableName;
-
+        i32 counter = 1;
         std::apply([&](auto... col_tags)
         {
             ([&]<typename ColType>(ColType col_tag)
             {
                 if constexpr (ColType::isPrimaryKey)
                 {
-                    spec.where.emplace_back(ast::PredicateNode{
-                        .column = std::string(ColType::columnName),
-                        .op     = Compare::Equal,
-                    });
+                    using FT     = ColType::FieldType;
+                    auto  slot   = counter;
+                    auto  name   = std::to_string(counter++);
+                    spec.where.emplace_back(
+                        ast::PredicateNode{.column     = std::string(ColType::columnName),
+                                           .op         = Compare::Equal,
+                                           .param_name = name});
+                    params.push(name,
+                        [val = obj.*(ColType::member), slot]
+                        (engine::SqliteStatement& s) {
+                            SqliteTypeAdapter<FT>::bind(s, slot, val);
+                        });
                 }
             }(col_tags), ...);
         }, typename TableType::ColumnsTuple{});
 
-        return spec;
+        return {std::move(spec), std::move(params)};
     }
-
-    [[nodiscard]] static ast::BoundParams build_delete_params(const RowType& obj)
+    
+    [[nodiscard]] static std::pair<ast::DeleteSpec, ast::BoundParams>
+    build_delete(const KeyType& key)
     {
+        ast::DeleteSpec  spec;
         ast::BoundParams params;
+        spec.table = TableType::tableName;
 
-        std::apply([&](auto... col_tags)
-        {
-            ([&]<typename ColType>(ColType col_tag)
-            {
-                using FT = ColType::FieldType;
-                if constexpr (ColType::isPrimaryKey)
-                {
-                    params.push([val = obj.*(ColType::member)](engine::SqliteStatement& s, i32 idx)
-                    {
-                        SqliteTypeAdapter<FT>::bind(s, idx, val);
-                    });
-                }
-            }(col_tags), ...);
-        }, typename TableType::ColumnsTuple{});
-        return params;
-    }
-
-    [[nodiscard]] static ast::BoundParams build_delete_params(const KeyType& obj)
-    {
-        ast::BoundParams params;
+        i32 counter = 1;
 
         if constexpr (detail::isTuple<KeyType>)
         {
-            std::apply([&](auto... values)
+            [&]<std::size_t... Is>(std::index_sequence<Is...>)
             {
-                ([&]<typename FT>(FT kv)
-                {
-                    params.push([val = kv](engine::SqliteStatement& s, i32 idx)
-                    {
-                        SqliteTypeAdapter<FT>::bind(s, idx, val);
-                    });
-                }(values), ...);
-            }, obj);
+                ([&] {
+                    using ColType = std::tuple_element_t<Is, typename TableType::KeyTuple>;
+                    using FT      = decltype(std::get<Is>(key));
+                    auto  slot    = counter;
+                    auto  name    = std::to_string(counter++);
+                    spec.where.emplace_back(
+                        ast::PredicateNode{
+                            .column     = std::string(ColType::columnName),
+                            .op         = Compare::Equal,
+                            .param_name = name});
+                    params.push(name,
+                        [val = std::get<Is>(key), slot](engine::SqliteStatement& s) {
+                            SqliteTypeAdapter<FT>::bind(s, slot, val);
+                        });
+                }(), ...);
+            }(std::make_index_sequence<std::tuple_size_v<typename TableType::KeyTuple>>{});
         }
         else
         {
-            params.push([val = obj](engine::SqliteStatement& s, i32 idx)
+            // Scalar PK - unchanged
+            auto name = std::to_string(counter);
+            auto slot = counter++;
+            std::apply([&]<typename ColType>(ColType col_tag)
             {
-                SqliteTypeAdapter<KeyType>::bind(s, idx, val);
-            });
+                spec.where.emplace_back(
+                    ast::PredicateNode{
+                        .column     = std::string(ColType::columnName),
+                        .op         = Compare::Equal,
+                        .param_name = name});
+            }, typename TableType::KeyTuple{});
+            params.push(name,
+                [val = key, slot](engine::SqliteStatement& s) {
+                    SqliteTypeAdapter<KeyType>::bind(s, slot, val);
+                });
         }
-        return params;
+
+        return {std::move(spec), std::move(params)};
     }
 };
 } // namespace tewi

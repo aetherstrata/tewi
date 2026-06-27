@@ -110,9 +110,7 @@ namespace tewi::ast
 
 [[nodiscard]] CompiledShape compile(const SelectSpec& spec)
 {
-    CompiledShape cq;
-    cq << build_select(spec);
-    return cq;
+    return CompiledShape{build_select(spec)};
 }
 
 // -----------------------------------------------------------------------
@@ -122,26 +120,27 @@ namespace tewi::ast
 // -----------------------------------------------------------------------
 [[nodiscard]] CompiledShape compile(const InsertSpec& spec)
 {
-    CompiledShape cq;
+    std::ostringstream ss;
 
-    cq << (spec.or_replace ? "INSERT OR REPLACE INTO " : "INSERT INTO ");
-    cq << spec.table;
-    cq << " (";
-
-    for (std::size_t i = 0; i < spec.assignments.size(); ++i) {
-        if (i > 0) cq << ", ";
-        cq << spec.assignments[i].column;
-    }
-
-    cq << ") VALUES (";
+    ss << (spec.or_replace ? "INSERT OR REPLACE INTO " : "INSERT INTO ");
+    ss << spec.table;
+    ss << " (";
 
     for (std::size_t i = 0; i < spec.assignments.size(); ++i) {
-        if (i > 0) cq << ", ";
-        cq << "?";
+        if (i > 0) ss << ", ";
+        ss << spec.assignments[i].column;
     }
 
-    cq << ");";
-    return cq;
+    ss << ") VALUES (";
+
+    for (std::size_t i = 0; i < spec.assignments.size(); ++i) {
+        if (i > 0) ss << ", ";
+        ss << "?" << spec.assignments[i].param_name;
+    }
+
+    ss << ");";
+
+    return CompiledShape{ss.str()};
 }
 
 // -----------------------------------------------------------------------
@@ -151,30 +150,30 @@ namespace tewi::ast
 // -----------------------------------------------------------------------
 [[nodiscard]] CompiledShape compile(const UpdateSpec& spec)
 {
-    CompiledShape cq;
+    std::ostringstream ss;
 
-    cq << "UPDATE ";
-    cq << spec.table;
-    cq << " SET ";
+    ss << "UPDATE ";
+    ss << spec.table;
+    ss << " SET ";
 
     for (std::size_t i = 0; i < spec.assignments.size(); ++i) {
-        if (i > 0) cq << ", ";
-        cq << spec.assignments[i].column;
-        cq << " = ?";
+        if (i > 0) ss << ", ";
+        ss << spec.assignments[i].column;
+        ss << " = ?";
     }
 
     if (!spec.where.empty()) {
-        cq << " WHERE ";
+        ss << " WHERE ";
         for (std::size_t i = 0; i < spec.where.size(); ++i) {
-            if (i > 0) cq << " AND ";
-            cq << spec.where[i].column;
-            cq << toSql(spec.where[i].op);   // existing helper used by SELECT compile()
-            cq << "?";
+            if (i > 0) ss << " AND ";
+            ss << spec.where[i].column;
+            ss << toSql(spec.where[i].op);   // existing helper used by SELECT compile()
+            ss << "?";
         }
     }
 
-    cq << ";";
-    return cq;
+    ss << ";";
+    return CompiledShape{ss.str()};
 }
 
 // -----------------------------------------------------------------------
@@ -184,23 +183,23 @@ namespace tewi::ast
 // -----------------------------------------------------------------------
 [[nodiscard]] CompiledShape compile(const DeleteSpec& spec)
 {
-    CompiledShape cq;
+    std::ostringstream ss;
 
-    cq << "DELETE FROM ";
-    cq << spec.table;
+    ss << "DELETE FROM ";
+    ss << spec.table;
 
     if (!spec.where.empty()) {
-        cq << " WHERE ";
+        ss << " WHERE ";
         for (std::size_t i = 0; i < spec.where.size(); ++i) {
-            if (i > 0) cq << " AND ";
-            cq << spec.where[i].column;
-            cq << toSql(spec.where[i].op);
-            cq << "?";
+            if (i > 0) ss << " AND ";
+            ss << spec.where[i].column;
+            ss << toSql(spec.where[i].op);
+            ss << "?";
         }
     }
 
-    cq << ";";
-    return cq;
+    ss << ";";
+    return CompiledShape{ss.str()};
 }
 
 } // namespace tewi::ast

@@ -24,6 +24,7 @@ struct PredicateNode
 {
     std::string column; ///< Fully qualified: "table.col" or "col"
     Compare op;         ///< "=", "<", "LIKE", ...
+    std::string param_name; ///< Bind parameter name (e.g. "?1")
 };
 
 // -----------------------------------------------------------------------
@@ -35,6 +36,7 @@ struct PredicateNode
 struct AssignmentNode
 {
     std::string column;  ///< Plain column name (not qualified)
+    std::string param_name; ///< Bind parameter name (e.g. "?1")
 };
 
 // -----------------------------------------------------------------------

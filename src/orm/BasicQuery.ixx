@@ -395,7 +395,7 @@ public:
         Iterator() = default;
 
         Iterator(engine::SqliteConnection& db, ast::CompiledShape cq, ast::BoundParams params, THydrator hydrator)
-            : _stmt(std::make_shared<engine::SqliteStatement>(db.handle(), cq.str()))
+            : _stmt(std::make_shared<engine::SqliteStatement>(db.handle(), cq.sql()))
             , _hydrator(std::move(hydrator))
         {
             params.bind(*_stmt);
@@ -445,12 +445,13 @@ private:
     ast::SelectSpec _spec;
     ast::BoundParams _params;
     THydrator _hydrator{};
+    i32 p_counter = 1;
 
     // Compile and prepare the statement in one step.
     [[nodiscard]] engine::SqliteStatement prepare() const
     {
         auto cq   = ast::compile(_spec);
-        auto stmt = _db.prepare(cq.str());
+        auto stmt = _db.prepare(cq.sql());
         _params.bind(stmt);
         return std::move(stmt);
     }
@@ -467,12 +468,15 @@ private:
 
         _spec.where.emplace_back(ast::PredicateNode {
             .column = std::string(col),
-            .op     = op
+            .op     = op,
+            .param_name = std::to_string(p_counter)
         });
-        _params.push([v = std::move(captured)](engine::SqliteStatement& s, i32 idx)
-        {
-            SqliteTypeAdapter<RV>::bind(s, idx, v);
-        });
+        _params.push(std::to_string(p_counter),
+            [v = std::move(captured), idx = p_counter](engine::SqliteStatement& s)
+            {
+                SqliteTypeAdapter<RV>::bind(s, idx, v);
+            });
+        p_counter++;
         return std::move(*this);
     }
 
@@ -481,6 +485,7 @@ private:
     [[nodiscard]] std::string runtime_col_name(Field Obj::* mp) const
     {
         std::string result;
+
         ([&]<typename T>()
         {
             std::apply([&](auto... col_tags)
@@ -490,12 +495,14 @@ private:
                     if constexpr (std::is_same_v<decltype(ColType::member), Field Obj::*>)
                     {
                         if (ColType::member == mp)
-                            result =
-                                std::string(T::tableName) + "." + std::string(ColType::columnName);
+                        {
+                            result = T::tableName + "." + ColType::columnName;
+                        }
                     }
                 }(col_tags), ...);
             }, typename T::ColumnsTuple{});
         }.template operator()<Tables>(), ...);
+
         return result;
     }
 };
