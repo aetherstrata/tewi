@@ -463,19 +463,13 @@ private:
         using RV = std::remove_cvref_t<V>;
         static_assert(SqliteAdaptable<RV>, "Value type is not adaptable to a SQLite type. "
                                            "Specialize SqliteTypeAdapter for it.");
-
-        RV captured = std::forward<V>(value);
-
+        
         _spec.where.emplace_back(ast::PredicateNode {
             .column = std::string(col),
             .op     = op,
             .param_name = std::to_string(p_counter)
         });
-        _params.push(std::to_string(p_counter),
-            [v = std::move(captured), idx = p_counter](engine::SqliteStatement& s)
-            {
-                SqliteTypeAdapter<RV>::bind(s, idx, v);
-            });
+        _params.add(std::to_string(p_counter), std::forward<V>(value));
         p_counter++;
         return std::move(*this);
     }

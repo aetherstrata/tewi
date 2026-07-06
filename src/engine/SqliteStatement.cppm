@@ -162,4 +162,18 @@ sqlite3_stmt* SqliteStatement::handle() const noexcept
 {
     return _stmt.get();
 }
+
+i32 SqliteStatement::getIndexFromName(std::string_view name)
+{
+    if (const auto& it = _paramIndexCache.find(name); it != _paramIndexCache.end())
+    {
+        return it->second;
+    }
+
+    i32 idx = sqlite3_bind_parameter_index(_stmt.get(), std::string(name).c_str());
+    if (idx == 0) throw SqliteError("Unknown bind parameter: " + std::string(name));
+    _paramIndexCache.emplace(std::string(name), idx);
+
+    return idx;
+}
 } // namespace tewi::engine

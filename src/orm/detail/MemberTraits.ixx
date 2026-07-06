@@ -76,7 +76,7 @@ struct mp_column<MP, Col, Rest...>
     using type = std::conditional_t<match(), Col, typename mp_column<MP, Rest...>::type>;
 };
 
-// MemberPtrs... -> std::tuple<FieldType1, FieldType2, …>
+// MemberPtrs... -> std::tuple<FieldType1, FieldType2, ...>
 template <auto... MemberPtrs>
 using MembersTuple =
     std::tuple<typename member_ptr<std::remove_cv_t<decltype(MemberPtrs)>>::FieldType...>;

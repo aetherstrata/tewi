@@ -100,16 +100,17 @@ public:
     /**
      * @brief Get the database file path
      *
-     * @return The filesystem path to the database file
+     * @return The filesystem path to the database file,
+     *         or `:memory:` if this is an in-memory database.
      */
-    [[nodiscard]] std::filesystem::path GetPath() const noexcept { return _path; };
+    [[nodiscard]] std::filesystem::path path() const noexcept { return _path; };
 
     /**
      * @brief Executes one or more SQL statements that return no rows.
      *
      * @details Calls @c sqlite3_exec() internally, which handles multi-statement
      * strings separated by semicolons. Suitable for DDL (`CREATE TABLE`,
-     * `DROP INDEX`, …) and `PRAGMA` statements. For parameterised DML use
+     * `DROP INDEX`, ...) and `PRAGMA` statements. For parameterised DML use
      * @c prepare() instead.
      *
      * @param[in] sql  Null-terminated or @c string_view compatible SQL string.

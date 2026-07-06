@@ -49,7 +49,7 @@ public:
 //  find_fk_column_in<TableType, TargetTable>
 //
 //  Walks TableType's column tuple looking for a Column that has a
-//  ForeignKey<TargetTable, …> constraint.  Returns the Column type,
+//  ForeignKey<TargetTable, ...> constraint.  Returns the Column type,
 //  or void if none is found.
 // -----------------------------------------------------------------------
 template <typename TargetTable, typename... Cols>

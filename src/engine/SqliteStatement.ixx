@@ -4,6 +4,7 @@ export module tewi:sqlite_statement;
 
 import :sqlite_error;
 import :number_types;
+import :string_map;
 
 import std;
 
@@ -175,9 +176,7 @@ public:
     template <typename T>
     SqliteStatement& bind(std::string_view name, T&& val)
     {
-        i32 idx = sqlite3_bind_parameter_index(_stmt.get(), std::string(name).c_str());
-        if (idx == 0) throw SqliteError("Unknown bind parameter: " + std::string(name));
-        return bind(idx, std::forward<T>(val));
+        return bind(getIndexFromName(name), std::forward<T>(val));
     }
 
     /// @}
@@ -344,9 +343,7 @@ public:
     [[nodiscard]] sqlite3_stmt* handle() const noexcept;
 
 private:
-    /**
-     * @brief Custom deleter that calls @c sqlite3_finalize() on the statement handle.
-     */
+    /// Custom deleter that calls @c sqlite3_finalize() on the statement handle.
     struct Finalizer
     {
         /// @param[in] ptr  SqliteStatement handle to finalize. May be @c nullptr.
@@ -358,5 +355,10 @@ private:
 
     /// Owned compiled statement handle
     std::unique_ptr<sqlite3_stmt, Finalizer> _stmt;
+
+    /// Named parameter index lookup cache
+    StringMap<i32> _paramIndexCache{};
+
+    i32 getIndexFromName(std::string_view name);
 };
 } // namespace tewi::engine

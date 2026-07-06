@@ -17,6 +17,7 @@ target_sources(${PROJECT_NAME} PUBLIC
         common/FixedString.ixx
         common/Logging.ixx
         common/NumberTypes.ixx
+        common/StringMap.ixx
         common/TypeHelpers.ixx
         engine/SqliteConnection.ixx
         engine/SqliteError.ixx

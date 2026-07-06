@@ -14,7 +14,7 @@ namespace tewi::ast
 
     case ProjectionKind::ColumnList: {
         std::string s = proj.distinct ? "DISTINCT " : "";
-        // Single-column DISTINCT form: SELECT DISTINCT col FROM …
+        // Single-column DISTINCT form: SELECT DISTINCT col FROM ...
         if (proj.distinct_col) return "DISTINCT " + *proj.distinct_col;
 
         bool first = true;

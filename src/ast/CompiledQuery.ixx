@@ -1,7 +1,10 @@
 module tewi:ast_compiled;
 
-import std;
 import :sqlite_statement;
+import :string_map;
+import :type_adapter;
+
+import std;
 
 // -----------------------------------------------------------------------
 // CompiledQuery – output of the renderer: ready SQL + bound parameters
@@ -22,6 +25,11 @@ private:
     std::string sqlString;
 };
 
+struct BinderError : std::runtime_error
+{
+    BinderError(const std::string& s) : std::runtime_error(s) {}
+};
+
 /// A sequence of parameter binders, produced fresh for each execution.
 /// Decoupled from the SQL string so the string can be compiled once
 /// and the params rebuilt cheaply per row/invocation.
@@ -29,13 +37,33 @@ struct BoundParams
 {
     using Binder = std::move_only_function<void(engine::SqliteStatement&) const>;
 
-    std::unordered_map<std::string, Binder> binders;
+    i32 slot = 1;
+    StringMap<Binder> binders;
 
     void bind(engine::SqliteStatement& stmt) const
     {
-        for (const auto& b : binders | std::views::values) b(stmt);
+        for (const auto& b : binders | std::views::values)
+        {
+            b(stmt);
+        }
     }
 
-    void push(std::string_view name, Binder b) { binders.emplace(std::string(name), std::move(b)); }
+    template <typename T>
+    void add(std::string_view name, T&& value)
+    {
+        if (binders.contains(name))
+        {
+            std::string msg = std::format("The parameter with name {} already has a bound value", name);
+            throw BinderError(msg);
+        }
+
+        binders[std::string(name)] = [val = value, i = slot] (engine::SqliteStatement& s)
+        {
+            using FT = std::remove_cvref_t<decltype(val)>;
+            SqliteTypeAdapter<FT>::bind(s, i, val);
+        };
+
+        slot++;
+    }
 };
 } // namespace tewi::ast

@@ -171,14 +171,9 @@ private:
         {
             ([&]<typename ColType>(ColType col_tag)
             {
-                using FT = ColType::FieldType;
                 std::string name = std::to_string(counter);
                 spec.assignments.emplace_back(std::string(ColType::columnName), name);
-                params.push(name,
-                    [val = obj.*(ColType::member), counter](engine::SqliteStatement& s)
-                    {
-                        SqliteTypeAdapter<FT>::bind(s, counter, val);
-                    });
+                params.add(name, obj.*(ColType::member));
                 counter++;
             }(col_tags), ...);
         }, typename TableType::ColumnsTuple{});
@@ -196,8 +191,6 @@ private:
         i32 counter = 1;
         auto add = [&]<typename ColType>(ColType col_tag, bool is_pk)
         {
-            using FT      = ColType::FieldType;
-            auto  slot    = counter; // captured integer
             auto  name    = std::to_string(counter++);
 
             if (!is_pk)
@@ -205,18 +198,15 @@ private:
                 spec.assignments.emplace_back(
                     ast::AssignmentNode{.column = std::string(ColType::columnName),
                                         .param_name = name});
-            } else
+            }
+            else
             {
                 spec.where.emplace_back(
                     ast::PredicateNode{.column = std::string(ColType::columnName),
                                        .op     = Compare::Equal,
                                        .param_name = name});
             }
-            params.push(name,
-                [val = obj.*(ColType::member), slot]
-                (engine::SqliteStatement& s) {
-                    SqliteTypeAdapter<FT>::bind(s, slot, val);
-                });
+            params.add(name, obj.*(ColType::member));
         };
 
         // SET columns first (non-PK), then WHERE columns (PK) -
@@ -253,18 +243,12 @@ private:
             {
                 if constexpr (ColType::isPrimaryKey)
                 {
-                    using FT     = ColType::FieldType;
-                    auto  slot   = counter;
                     auto  name   = std::to_string(counter++);
                     spec.where.emplace_back(
                         ast::PredicateNode{.column     = std::string(ColType::columnName),
                                            .op         = Compare::Equal,
                                            .param_name = name});
-                    params.push(name,
-                        [val = obj.*(ColType::member), slot]
-                        (engine::SqliteStatement& s) {
-                            SqliteTypeAdapter<FT>::bind(s, slot, val);
-                        });
+                    params.add(name, obj.*(ColType::Member));
                 }
             }(col_tags), ...);
         }, typename TableType::ColumnsTuple{});
@@ -287,26 +271,20 @@ private:
             {
                 ([&] {
                     using ColType = std::tuple_element_t<Is, typename TableType::KeyTuple>;
-                    using FT      = decltype(std::get<Is>(key));
-                    auto  slot    = counter;
                     auto  name    = std::to_string(counter++);
                     spec.where.emplace_back(
                         ast::PredicateNode{
                             .column     = std::string(ColType::columnName),
                             .op         = Compare::Equal,
                             .param_name = name});
-                    params.push(name,
-                        [val = std::get<Is>(key), slot](engine::SqliteStatement& s) {
-                            SqliteTypeAdapter<FT>::bind(s, slot, val);
-                        });
+                    params.add(name, std::get<Is>(key));
                 }(), ...);
             }(std::make_index_sequence<std::tuple_size_v<typename TableType::KeyTuple>>{});
         }
         else
         {
             // Scalar PK - unchanged
-            auto name = std::to_string(counter);
-            auto slot = counter++;
+            auto name = std::to_string(counter++);
             std::apply([&]<typename ColType>(ColType col_tag)
             {
                 spec.where.emplace_back(
@@ -315,10 +293,7 @@ private:
                         .op         = Compare::Equal,
                         .param_name = name});
             }, typename TableType::KeyTuple{});
-            params.push(name,
-                [val = key, slot](engine::SqliteStatement& s) {
-                    SqliteTypeAdapter<KeyType>::bind(s, slot, val);
-                });
+            params.add(name, key);
         }
 
         return {std::move(spec), std::move(params)};

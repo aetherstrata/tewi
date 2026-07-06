@@ -46,7 +46,7 @@ public:
     }
 
     // ----------------------------------------------------------------
-    // select<&T::col1, &T::col2, …>()  - projected columns
+    // select<&T::col1, &T::col2, ...>()  - projected columns
     // ----------------------------------------------------------------
     template <auto... MemberPtrs>
         requires detail::HomogeneousMemberPtrs<MemberPtrs...>
