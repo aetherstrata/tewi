@@ -24,6 +24,3 @@ export import :registry;
 
 export import :logging;
 export import :number_types;
-
-export import :type_adapter;
-export import :base_adapters;

@@ -19,7 +19,6 @@ import :member_traits;
 import :fk_helpers;
 import :order;
 import :type_adapter;
-import :base_adapters;
 
 import std;
 
