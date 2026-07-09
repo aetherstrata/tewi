@@ -2,6 +2,9 @@
 	"cSpell.words": [
 		"tewi"
 	],
+	"clangd.arguments": [
+		"--experimental-modules-support"
+	],
 	"cmake.ctest.testExplorerIntegrationEnabled": true,
     "cmake.ctest.testExplorerIntegrationAutoRefresh": true,
 }

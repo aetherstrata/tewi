@@ -1,0 +1,18 @@
+CompileFlags:
+  Add:
+    - -std=c++26
+    - -DTEWI_LOG
+    - -DTEWI_TRACE
+    - -Iinclude
+    - -Isrc
+    - -Wall
+    - -Wextra
+  Remove:
+    - -stdlib=libstdc++
+  CompilationDatabase: out/build/linux-debug
+
+Diagnostics:
+  UnusedIncludes: Strict
+
+Index:
+  Background: Build
