@@ -32,6 +32,9 @@
 *.out
 *.app
 
+# Build output folder
+out/
+
 ### CMake template
 CMakeLists.txt.user
 CMakeCache.txt

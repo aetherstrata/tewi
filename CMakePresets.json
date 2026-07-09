@@ -20,6 +20,7 @@
         "CMAKE_CXX_STANDARD": "26",
         "CMAKE_CXX_STANDARD_REQUIRED": "ON",
         "CMAKE_CXX_EXTENSIONS": "OFF",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
         "CMAKE_CXX_SCAN_FOR_MODULES": "ON",
         "CMAKE_CXX_MODULE_STD": "ON"
       }
@@ -30,6 +31,20 @@
       "architecture": {
         "value": "x64",
         "strategy": "external"
+      }
+    },
+    {
+      "name": "gcc",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_CXX_COMPILER": "g++"
+      }
+    },
+    {
+      "name": "clang",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_CXX_COMPILER": "clang++"
       }
     },
     {
@@ -76,10 +91,25 @@
         "type": "equals",
         "lhs": "${hostSystemName}",
         "rhs": "Linux"
-      },
+      }
+    },
+    {
+      "name": "linux-gcc-base",
+      "hidden": true,
+      "inherits": ["linux-base", "gcc"],
       "vendor": {
         "microsoft.com/VisualStudioSettings/CMake/1.0": {
           "intelliSenseMode": "linux-gcc-x64"
+        }
+      }
+    },
+    {
+      "name": "linux-clang-base",
+      "hidden": true,
+      "inherits": ["linux-base", "clang"],
+      "vendor": {
+        "microsoft.com/VisualStudioSettings/CMake/1.0": {
+          "intelliSenseMode": "linux-clang-x64"
         }
       }
     },
@@ -112,24 +142,48 @@
     },
     {
       "name": "linux-debug",
-      "displayName": "Linux x64 Debug (Ninja)",
-      "inherits": ["linux-base", "trace"],
+      "displayName": "Linux x64 Debug (GCC, Ninja)",
+      "inherits": ["linux-gcc-base", "trace"],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug"
       }
     },
     {
       "name": "linux-release",
-      "displayName": "Linux x64 Release (Ninja)",
-      "inherits": "linux-base",
+      "displayName": "Linux x64 Release (GCC, Ninja)",
+      "inherits": "linux-gcc-base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release"
       }
     },
     {
       "name": "linux-relwithdebinfo",
-      "displayName": "Linux x64 RelWithDebInfo (Ninja)",
-      "inherits": "linux-base",
+      "displayName": "Linux x64 RelWithDebInfo (GCC, Ninja)",
+      "inherits": "linux-gcc-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+      }
+    },
+    {
+      "name": "linux-clang-debug",
+      "displayName": "Linux x64 Debug (Clang, Ninja)",
+      "inherits": ["linux-clang-base", "trace"],
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "linux-clang-release",
+      "displayName": "Linux x64 Release (Clang, Ninja)",
+      "inherits": "linux-clang-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "linux-clang-relwithdebinfo",
+      "displayName": "Linux x64 RelWithDebInfo (Clang, Ninja)",
+      "inherits": "linux-clang-base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo"
       }
@@ -171,6 +225,24 @@
       "displayName": "Linux RelWithDebInfo Build",
       "configurePreset": "linux-relwithdebinfo",
       "configuration": "RelWithDebInfo"
+    },
+    {
+      "name": "linux-clang-debug-build",
+      "displayName": "Linux Clang Debug Build",
+      "configurePreset": "linux-clang-debug",
+      "configuration": "Debug"
+    },
+    {
+      "name": "linux-clang-release-build",
+      "displayName": "Linux Clang Release Build",
+      "configurePreset": "linux-clang-release",
+      "configuration": "Release"
+    },
+    {
+      "name": "linux-clang-relwithdebinfo-build",
+      "displayName": "Linux Clang RelWithDebInfo Build",
+      "configurePreset": "linux-clang-relwithdebinfo",
+      "configuration": "RelWithDebInfo"
     }
   ],
   "testPresets": [
@@ -210,6 +282,20 @@
       "name": "linux-release-test",
       "displayName": "Linux Release Tests",
       "configurePreset": "linux-release",
+      "inherits": "test-base",
+      "configuration": "Release"
+    },
+    {
+      "name": "linux-clang-debug-test",
+      "displayName": "Linux Clang Debug Tests",
+      "configurePreset": "linux-clang-debug",
+      "inherits": "test-base",
+      "configuration": "Debug"
+    },
+    {
+      "name": "linux-clang-release-test",
+      "displayName": "Linux Clang Release Tests",
+      "configurePreset": "linux-clang-release",
       "inherits": "test-base",
       "configuration": "Release"
     }
