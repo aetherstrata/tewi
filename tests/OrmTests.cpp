@@ -112,6 +112,19 @@ TEST_CASE("ORM: Schema Creation and Basic CRUD", "[orm][crud]")
         i64 count_after = db.count<User>();
         REQUIRE(count_after == 0);
     }
+
+    SECTION("Delete Row by object")
+    {
+        i64 id = users.insert({1, "Dana", 22});
+        User dana = db.select<User>().where<&User::id>(id).firstOrDefault().value();
+
+        i64 count_before = db.count<User>();
+        REQUIRE(count_before == 1);
+
+        users.erase(dana);
+        i64 count_after = db.count<User>();
+        REQUIRE(count_after == 0);
+    }
 }
 
 TEST_CASE("ORM: Advanced Queries and Filtering", "[orm][select]")

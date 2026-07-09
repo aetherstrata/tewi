@@ -13,8 +13,14 @@ import std;
 namespace tewi::ast
 {
 
+/// Builds a SQLite named-parameter placeholder (e.g. "1" -> ":p1").
+[[nodiscard]] inline std::string makeParamName(i32 n)
+{
+    return ":p" + std::to_string(n);
+}
+
 /// The immutable SQL string for a query shape.
-/// Contains no runtime values — safe to cache and reuse indefinitely.
+/// Contains no runtime values - safe to cache and reuse indefinitely.
 struct CompiledShape
 {
     CompiledShape(std::string s) : sqlString(std::move(s)) {}
@@ -37,7 +43,6 @@ struct BoundParams
 {
     using Binder = std::move_only_function<void(engine::SqliteStatement&) const>;
 
-    i32 slot = 1;
     StringMap<Binder> binders;
 
     void bind(engine::SqliteStatement& stmt) const
@@ -48,7 +53,7 @@ struct BoundParams
         }
     }
 
-    template <typename T>
+    template <SqliteAdaptable T>
     void add(std::string_view name, T&& value)
     {
         if (binders.contains(name))
@@ -57,13 +62,11 @@ struct BoundParams
             throw BinderError(msg);
         }
 
-        binders[std::string(name)] = [val = value, i = slot] (engine::SqliteStatement& s)
+        binders[std::string(name)] = [val = value, nm = std::string(name)] (engine::SqliteStatement& s)
         {
             using FT = std::remove_cvref_t<decltype(val)>;
-            SqliteTypeAdapter<FT>::bind(s, i, val);
+            SqliteTypeAdapter<FT>::bind(s, nm, val);
         };
-
-        slot++;
     }
 };
 } // namespace tewi::ast

@@ -17,7 +17,6 @@ import :sqlite_statement;
 import :sqlite_transaction;
 import :table;
 import :type_adapter;
-import :base_adapters;
 
 import std;
 
@@ -171,7 +170,7 @@ private:
         {
             ([&]<typename ColType>(ColType col_tag)
             {
-                std::string name = std::to_string(counter);
+                std::string name = ast::makeParamName(counter);
                 spec.assignments.emplace_back(std::string(ColType::columnName), name);
                 params.add(name, obj.*(ColType::member));
                 counter++;
@@ -191,20 +190,22 @@ private:
         i32 counter = 1;
         auto add = [&]<typename ColType>(ColType col_tag, bool is_pk)
         {
-            auto  name    = std::to_string(counter++);
+            auto  name = ast::makeParamName(counter++);
 
             if (!is_pk)
             {
                 spec.assignments.emplace_back(
-                    ast::AssignmentNode{.column = std::string(ColType::columnName),
-                                        .param_name = name});
+                    ast::AssignmentNode{
+                        .column = std::string(ColType::columnName),
+                        .param_name = name});
             }
             else
             {
                 spec.where.emplace_back(
-                    ast::PredicateNode{.column = std::string(ColType::columnName),
-                                       .op     = Compare::Equal,
-                                       .param_name = name});
+                    ast::PredicateNode{
+                        .column = std::string(ColType::columnName),
+                        .op     = Compare::Equal,
+                        .param_name = name});
             }
             params.add(name, obj.*(ColType::member));
         };
@@ -243,12 +244,12 @@ private:
             {
                 if constexpr (ColType::isPrimaryKey)
                 {
-                    auto  name   = std::to_string(counter++);
+                    auto  name   = ast::makeParamName(counter++);
                     spec.where.emplace_back(
                         ast::PredicateNode{.column     = std::string(ColType::columnName),
                                            .op         = Compare::Equal,
                                            .param_name = name});
-                    params.add(name, obj.*(ColType::Member));
+                    params.add(name, obj.*(ColType::member));
                 }
             }(col_tags), ...);
         }, typename TableType::ColumnsTuple{});
@@ -271,7 +272,7 @@ private:
             {
                 ([&] {
                     using ColType = std::tuple_element_t<Is, typename TableType::KeyTuple>;
-                    auto  name    = std::to_string(counter++);
+                    auto  name    = ast::makeParamName(counter++);
                     spec.where.emplace_back(
                         ast::PredicateNode{
                             .column     = std::string(ColType::columnName),
@@ -284,7 +285,7 @@ private:
         else
         {
             // Scalar PK - unchanged
-            auto name = std::to_string(counter++);
+            auto name = ast::makeParamName(counter++);
             std::apply([&]<typename ColType>(ColType col_tag)
             {
                 spec.where.emplace_back(

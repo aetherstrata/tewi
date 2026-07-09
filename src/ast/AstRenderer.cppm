@@ -44,7 +44,7 @@ namespace tewi::ast
     for (const auto& pred : preds)
     {
         if (!first) s += " AND ";
-        s += pred.column + " " + std::string(toSql(pred.op)) + " ?";
+        s += pred.column + " " + std::string(toSql(pred.op)) + " " + pred.param_name;
         first = false;
     }
     return s;
@@ -135,7 +135,7 @@ namespace tewi::ast
 
     for (std::size_t i = 0; i < spec.assignments.size(); ++i) {
         if (i > 0) ss << ", ";
-        ss << "?" << spec.assignments[i].param_name;
+        ss << spec.assignments[i].param_name;
     }
 
     ss << ");";
@@ -159,7 +159,7 @@ namespace tewi::ast
     for (std::size_t i = 0; i < spec.assignments.size(); ++i) {
         if (i > 0) ss << ", ";
         ss << spec.assignments[i].column;
-        ss << " = ?";
+        ss << " = " << spec.assignments[i].param_name;
     }
 
     if (!spec.where.empty()) {
@@ -167,8 +167,8 @@ namespace tewi::ast
         for (std::size_t i = 0; i < spec.where.size(); ++i) {
             if (i > 0) ss << " AND ";
             ss << spec.where[i].column;
-            ss << toSql(spec.where[i].op);   // existing helper used by SELECT compile()
-            ss << "?";
+            ss << " " << toSql(spec.where[i].op);   // existing helper used by SELECT compile()
+            ss << " " << spec.where[i].param_name;
         }
     }
 
@@ -193,8 +193,8 @@ namespace tewi::ast
         for (std::size_t i = 0; i < spec.where.size(); ++i) {
             if (i > 0) ss << " AND ";
             ss << spec.where[i].column;
-            ss << toSql(spec.where[i].op);
-            ss << "?";
+            ss << " " << toSql(spec.where[i].op);
+            ss << " " << spec.where[i].param_name;
         }
     }
 
