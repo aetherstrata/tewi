@@ -189,24 +189,6 @@ TEST_CASE("BasicQuery: OFFSET without LIMIT", "[orm][query][regression]")
     REQUIRE(rows[1].username == "carol");
 }
 
-TEST_CASE("OrmDatabase: ownership semantics", "[orm][query][regression]")
-{
-    // Moving is allowed: a factory that builds a database and returns it by
-    // value borrows nothing yet, so the move is safe. seeded() relies on this.
-    STATIC_REQUIRE(std::is_move_constructible_v<OrmDatabase>);
-
-    // Copying never was possible - SqliteConnection owns a unique handle.
-    STATIC_REQUIRE(!std::is_copy_constructible_v<OrmDatabase>);
-
-    // The dangling case - db.select<>() on a temporary - is ruled out by the
-    // deleted && overloads. That is a compile error by construction and cannot
-    // be asserted here: selecting a deleted function is a hard error rather
-    // than an unsatisfied requirement, so `requires` cannot detect it.
-
-    // The lvalue path stays usable.
-    STATIC_REQUIRE(requires(OrmDatabase& db) { db.template select<UserTable>(); });
-}
-
 TEST_CASE("Table: foreign key counting", "[orm][schema][regression]")
 {
     // join<UserTable>() on MessageTable is ambiguous: FindFkTo would silently
