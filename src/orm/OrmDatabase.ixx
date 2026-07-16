@@ -23,8 +23,8 @@ namespace tewi
 export class OrmDatabase
 {
 public:
-    explicit OrmDatabase(engine::SqliteConnection& db) noexcept
-        : _db(db)
+    explicit OrmDatabase(engine::SqliteConnection db) noexcept
+        : _db(std::move(db))
     {}
 
     // ----------------------------------------------------------------
@@ -91,12 +91,33 @@ public:
     {
         ([&]()
         {
-            _db.exec(Tables::create_table_sql(ifNotExists));
-            if constexpr (Tables::indexCount > 0) _db.exec(Tables::create_indexes_sql(ifNotExists));
+            const ast::TableDefNode spec = Tables::creation_spec(ifNotExists);
+            _db.exec(ast::render(spec));
+
+            for (const ast::IndexDefNode& idxSpec : spec.indices)
+            {
+                _db.exec(ast::render(idxSpec));
+            }
         }(), ...);
     }
 
 private:
-    engine::SqliteConnection& _db;
+    mutable engine::SqliteConnection _db;
 };
+
+/**
+ * Create a temporary in-memory database.
+ * @return A new @c OrmDatabase instance connected to an in-memory database.
+ * @note Each in-memory database is independent and ceases to exist as soon as
+ *       the database is destroyed.
+ */
+export OrmDatabase InMemory() noexcept
+{
+    return OrmDatabase(engine::SqliteConnection(":memory:"));
+}
+
+export OrmDatabase Open(const std::filesystem::path& dbPath)
+{
+    return OrmDatabase(engine::SqliteConnection(dbPath.c_str()));
+}
 } // namespace tewi

@@ -1,6 +1,6 @@
 module;
-#include <sqlite3.h>
 #include "common/Log.h"
+#include <sqlite3.h>
 module tewi;
 
 import :sqlite_statement;
@@ -22,7 +22,8 @@ static void check(const tewi::i32 rc, std::string_view context, tewi::i32 ok_sen
 {
     if (rc != ok_sentinel)
     {
-        LOG_ERR("SQLite operation failed: {} {}", context, tewi::engine::SqliteError::PrettyCode(rc));
+        LOG_ERR("SQLite operation failed: {} {}", context,
+                tewi::engine::SqliteError::PrettyCode(rc));
         throw tewi::engine::SqliteError(std::string(context), rc);
     }
 }
@@ -46,7 +47,7 @@ SqliteStatement& SqliteStatement::bind(const i32 idx, const i32 val)
 
 SqliteStatement& SqliteStatement::bind(const i32 idx, const i64 val)
 {
-    check(sqlite3_bind_int64(_stmt.get(), idx, val), "bind int64");
+    check(sqlite3_bind_int64(_stmt.get(), idx, val), "bind i64");
     LOG_TRACE("Bound i64 value {} at index {}", val, idx);
     return *this;
 }
@@ -135,10 +136,7 @@ std::span<const std::byte> SqliteStatement::columnBlob(const i32 col) const
     const void* ptr   = sqlite3_column_blob(_stmt.get(), col);
     const usize bytes = sqlite3_column_bytes(_stmt.get(), col);
 
-    if (ptr == nullptr || bytes <= 0)
-    {
-        return {};
-    }
+    if (ptr == nullptr || bytes <= 0) return {};
 
     return {static_cast<const std::byte*>(ptr), bytes};
 }
@@ -172,6 +170,7 @@ i32 SqliteStatement::getIndexFromName(std::string_view name)
 
     i32 idx = sqlite3_bind_parameter_index(_stmt.get(), std::string(name).c_str());
     if (idx == 0) throw SqliteError("Unknown bind parameter: " + std::string(name));
+    LOG_TRACE("Parameter {} has index {}", name, idx);
     _paramIndexCache.emplace(std::string(name), idx);
 
     return idx;

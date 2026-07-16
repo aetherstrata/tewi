@@ -1,6 +1,6 @@
 module;
 #include <sqlite3.h>
-export module tewi:sqlite_connection;
+module tewi:sqlite_connection;
 
 import :number_types;
 
@@ -27,7 +27,7 @@ class SqliteTransaction;
  * threads without external synchronization. Create one SqliteDatabase per thread,
  * or wrap access in a mutex.
  */
-export class SqliteConnection
+class SqliteConnection
 {
 public:
     /**
@@ -213,12 +213,4 @@ private:
     /// SQLite database file path
     std::filesystem::path _path;
 };
-
-/**
- * Create a temporary in-memory database.
- * @return A new @c SqliteDatabase instance connected to an in-memory database.
- * @note Each in-memory database is independent and ceases to exist as soon as
- *       the database connection is closed.
- */
-export inline SqliteConnection InMemory() { return SqliteConnection{":memory:"}; }
 } // namespace tewi::engine

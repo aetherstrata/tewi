@@ -9,49 +9,6 @@ import std;
 
 namespace tewi::detail
 {
-/**
- * @brief Primary template for member pointer decomposition.
- *
- * This template is intentionally left undefined. Only the partial
- * specialization for member pointer types is valid. Instantiating
- * this primary template with a non-member-pointer type will result
- * in a compile-time error.
- *
- * @tparam T A member pointer type of the form `Field Obj::*`.
- *
- * @see member_ptr<Field Obj::*>
- */
-template <typename T>
-struct member_ptr;
-
-/**
- * @brief Partial specialization that decomposes a member pointer type.
- *
- * Given a member pointer type `Field Obj::*`, this trait exposes the
- * enclosing class type and the field type as nested type aliases.
- *
- * @tparam Obj   The class type that contains the member.
- * @tparam Field The type of the member pointed to.
- *
- * @par Example
- * @code
- * struct Foo { i32 x; };
- *
- * using MP = member_ptr<decltype(&Foo::x)>;
- * static_assert(std::is_same_v<MP::ObjectType, Foo>);
- * static_assert(std::is_same_v<MP::FieldType,  i32>);
- * @endcode
- */
-template <typename Obj, typename Field>
-struct member_ptr<Field Obj::*>
-{
-    /// The class type that owns the member (`Obj` in `Field Obj::*`).
-    using ObjectType = Obj;
-
-    /// The type of the member being pointed to (`Field` in `Field Obj::*`).
-    using FieldType = Field;
-};
-
 template <auto MP, typename... Ts>
 struct mp_column;
 

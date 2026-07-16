@@ -2,6 +2,8 @@ module tewi:fixed_string;
 
 import :number_types;
 
+import std;
+
 // ============================================================================
 // FixedString - compile-time string NTTP
 // ============================================================================
@@ -44,6 +46,28 @@ struct FixedString
     }
 
     /**
+     * @brief Constructs a fixed string from a @c std::string_view.
+     *
+     * @pre @p sv.size() == N - 1. Lets a compile-time-rendered SQL string
+     * (e.g. the result of rendering a DDL AST to a @c std::string within a
+     * @c consteval function) be converted into a literal, allocation-free
+     * value that can safely escape that compile-time evaluation.
+     *
+     * @param sv View whose contents are copied, followed by a null terminator.
+     */
+    consteval FixedString(std::string_view sv) noexcept
+    {
+        if (sv.length() != size)
+            throw std::logic_error("string_view and FixedString must have the same length");
+
+        for (usize i = 0; i < size; ++i)
+        {
+            data[i] = sv[i];
+        }
+        data[size] = '\0';
+    }
+
+    /**
      * @brief Returns the string contents as a string view.
      *
      * The returned view excludes the terminating null character.
@@ -51,6 +75,15 @@ struct FixedString
      * @return A @c std::string_view over the stored character sequence.
      */
     [[nodiscard]] constexpr std::string_view view() const noexcept { return {data.data(), size}; }
+
+    /**
+     * @brief Returns the string contents as a head-allocated @c std::string.
+     *
+     * The returned string excludes the terminating null character.
+     *
+     * @return A @c std::string over the stored character sequence.
+     */
+    [[nodiscard]] std::string str() const noexcept { return {data.data(), size}; }
 
     /**
      * @brief Compares two fixed strings for equality.

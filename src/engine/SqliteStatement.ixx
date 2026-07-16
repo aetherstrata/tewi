@@ -1,6 +1,6 @@
 module;
 #include <sqlite3.h>
-export module tewi:sqlite_statement;
+module tewi:sqlite_statement;
 
 import :sqlite_error;
 import :number_types;
@@ -32,7 +32,7 @@ namespace tewi::engine
  *   }
  * @endcode
  */
-export class SqliteStatement
+class SqliteStatement
 {
 public:
     /**

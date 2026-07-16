@@ -71,8 +71,8 @@ TEST_CASE("ORM DDL: column list", "[orm][schema]")
 TEST_CASE("ORM: Schema Creation and Basic CRUD", "[orm][crud]")
 {
     // Setup in-memory SQLite DB
-    engine::SqliteConnection raw_db(":memory:");
-    OrmDatabase db(raw_db);
+    OrmDatabase db = InMemory();
+
     // Bootstrap Tables
     db.createTable<UserTable, PostTable>();
 
@@ -129,6 +129,9 @@ TEST_CASE("ORM: Schema Creation and Basic CRUD", "[orm][crud]")
 
 TEST_CASE("ORM: Advanced Queries and Filtering", "[orm][select]")
 {
+    // Setup in-memory SQLite DB
+    OrmDatabase db = InMemory();
+
     std::vector<User> toInsert {
             {1, "Dave", 20},
             {2, "Eve", 25},
@@ -136,8 +139,6 @@ TEST_CASE("ORM: Advanced Queries and Filtering", "[orm][select]")
             {4, "Grace", 40}
     };
 
-    auto raw = engine::InMemory();
-    OrmDatabase db(raw);
     db.createTable<UserTable>();
 
     auto users = db.repo<UserTable>();
@@ -159,8 +160,9 @@ TEST_CASE("ORM: Advanced Queries and Filtering", "[orm][select]")
 
 TEST_CASE("ORM: Foreign Key Joins", "[orm][join]")
 {
-    auto raw = engine::InMemory();
-    OrmDatabase db(raw);
+    // Setup in-memory SQLite DB
+    OrmDatabase db = InMemory();
+
     db.createTable<UserTable, PostTable>();
 
     i64 id = db.repo<UserTable>().insert({0, "Writer1", 35});

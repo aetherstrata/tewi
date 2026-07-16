@@ -13,7 +13,7 @@
  * @param TableAlias Table descriptor type associated with a plain struct.
  *
  * @note  @c TableAlias must be a @c Table<> descriptor.
- * @warning This macro must be used at namespace scope.
+ * @warning This macro must be used at global scope.
  */
 #define TEWI_REGISTER_TABLE(TableAlias)                                              \
 static_assert(::tewi::ITable<TableAlias>,                                            \

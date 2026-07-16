@@ -18,7 +18,6 @@ add_executable(${PROJECT_NAME}_tests
         LogInitializer.cpp
         TableRegistryTests.cpp
         TableMetaTests.cpp
-        CreateTableTests.cpp
         Tables.h
 )
 

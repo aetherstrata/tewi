@@ -29,52 +29,40 @@ namespace tewi
 // -----------------------------------------------------------------------
 namespace detail
 {
+/// Table<> descriptor owning MemberPtr's object type; void when unregistered.
+template <auto MemberPtr>
+using OwnerTable = TableRegistry<ObjectOf<MemberPtr>>::TableType;
+
+/// True when MemberPtr's table is among Tables... and maps the member to a column.
 template <auto MemberPtr, ITable... Tables>
-[[nodiscard]] consteval auto get_table_and_column_names()
+constexpr bool isQueriedMember = []
 {
-    struct Names {
-        std::string_view table{};
-        std::string_view column{};
-    };
-    Names result{};
-
-    // Walk the pack and update the result if a match is found.
-    ([&]<typename T>()
+    if constexpr (HasRegisteredTable<ObjectOf<MemberPtr>>)
     {
-        constexpr std::string_view col = T::template ColumnOf<MemberPtr>::columnName;
-        if constexpr (!col.empty())
-        {
-            result.table = T::tableName;
-            result.column = col;
-        }
-    }.template operator()<Tables>(), ...);
-
-    return result;
-}
+        return (std::is_same_v<OwnerTable<MemberPtr>, Tables> || ...)
+               && !std::is_void_v<typename OwnerTable<MemberPtr>::template ColumnOf<MemberPtr>>;
+    }
+    else return false;
+}();
 
 template <auto MemberPtr, ITable... Tables>
 [[nodiscard]] constexpr std::string_view qualified_column_name()
 {
-    constexpr auto names = get_table_and_column_names<MemberPtr, Tables...>();
+    static_assert(isQueriedMember<MemberPtr, Tables...>,
+                  "qualified_column_name: member pointer must map to a column of one of the "
+                  "queried tables, and its owner type must be registered with ORM_REGISTER_TABLE.");
 
-    static_assert(!names.table.empty() && !names.column.empty(),
-                  "qualified_column_name: member pointer must belong to one of the queried tables.");
-
-    constexpr std::size_t N = names.table.size() + 1 + names.column.size() + 1;
-
-    // Static allocation ensures the string outlives the function return.
-    static constexpr FixedString<N> fs = [&]() constexpr
+    if constexpr (isQueriedMember<MemberPtr, Tables...>)
     {
-        char buffer[N]{};
-        std::size_t idx = 0;
-        for (char c : names.table)  { buffer[idx++] = c; }
-        buffer[idx++] = '.';
-        for (char c : names.column) { buffer[idx++] = c; }
-        buffer[idx] = '\0';
-        return FixedString<N>(buffer);
-    }();
+        using Owner = OwnerTable<MemberPtr>;
 
-    return fs.view();
+        // Static storage ensures the string outlives the function return.
+        static constexpr auto fqn =
+            Owner::template fully_qualified_name<typename Owner::template ColumnOf<MemberPtr>>();
+
+        return fqn.view();
+    }
+    else return {};
 }
 
 /// Build the SelectSpec projection column list for all-column queries.
@@ -88,10 +76,10 @@ template <ITable... Tables>
         // Expand each table's columns as "tableName.colName"
         std::apply([&](auto... col_tags)
         {
-            ([&](auto col_tag)
+            ([&]<typename ColType>(ColType col_tag)
             {
                 proj.columns.emplace_back(std::string(T::tableName) + "."
-                                       + std::string(decltype(col_tag)::columnName));
+                                        + std::string(ColType::columnName));
             }(col_tags), ...);
         }, typename T::ColumnsTuple{});
     }.template operator()<Tables>(), ...);
@@ -103,7 +91,7 @@ template <ITable TableType>
 [[nodiscard]] ast::TableRef make_table_ref()
 {
     return ast::TableRef{
-        .name            = TableType::tableName,
+        .name            = std::string(TableType::tableName),
         .all_columns_sql = TableType::column_list(TableType::tableName)
     };
 }
@@ -166,8 +154,6 @@ public:
             "where<MemberPtr>: value type is not compatible with the member pointer's field type.");
 
         const std::string_view col = detail::qualified_column_name<MemberPtr, Tables...>();
-        static_assert(!detail::qualified_column_name<MemberPtr, Tables...>().empty(),
-            "whereOp<MemberPtr>: member pointer must belong to one of the queried tables.");
 
         return std::move(*this).template push_predicate(col, op, std::forward<V>(value));
     }
@@ -178,10 +164,6 @@ public:
     template <auto MemberPtr>
     [[nodiscard]] BasicQuery orderBy(Order ord = Order::ASC) &&
     {
-        static_assert(
-            !detail::qualified_column_name<MemberPtr, Tables...>().empty(),
-            "orderBy<MemberPtr>: member pointer must belong to one of the queried tables.");
-
         _spec.order_by.emplace_back(ast::OrderNode{
             .column = std::string(detail::qualified_column_name<MemberPtr, Tables...>()),
             .direction = ord
@@ -219,10 +201,6 @@ public:
     template <auto MemberPtr>
     [[nodiscard]] BasicQuery distinct() &&
     {
-        static_assert(
-            !detail::qualified_column_name<MemberPtr, Tables...>().empty(),
-            "distinct<MemberPtr>: member pointer must belong to one of the queried tables.");
-
         _spec.projection.distinct     = true;
         _spec.projection.distinct_col = detail::qualified_column_name<MemberPtr, Tables...>();
         return std::move(*this);
@@ -318,9 +296,7 @@ public:
         proj.distinct = _spec.projection.distinct;
         ([&]<auto MP>()
         {
-            constexpr std::string col = detail::qualified_column_name<MP, Tables...>();
-            static_assert(!detail::qualified_column_name<MP, Tables...>().empty(),
-                "select<MemberPtrs...>: a member pointer is not mapped to any queried table.");
+            constexpr std::string_view col = detail::qualified_column_name<MP, Tables...>();
             proj.columns.emplace_back(col);
         }.template operator()<MemberPtrs>(), ...);
 

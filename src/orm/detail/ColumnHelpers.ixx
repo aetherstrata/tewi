@@ -35,5 +35,6 @@ consteval bool unique_column_names()
 
 template <typename... Cols>
 concept UniqueColumnNames = unique_column_names<Cols...>();
+
 } // namespace detail
 } // namespace tewi

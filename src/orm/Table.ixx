@@ -1,10 +1,12 @@
 export module tewi:table;
 
+import :ast_spec;
+import :ast_renderer;
+import :fixed_string;
 import :column;
 import :index;
 import :column_helpers;
 import :pk_helpers;
-import :type_adapter;
 
 import std;
 
@@ -15,11 +17,11 @@ import std;
 namespace tewi
 {
 
-/// Maps a C++ struct T to a SQLite table.
+/// Maps a C++ struct T to an SQLite table.
 export template <FixedString name, typename T, typename ColPack, typename IdxPack = Indexes<>>
 struct Table;
 
-template <FixedString name, typename T, typename... Cols, typename... Idxs>
+template <FixedString name, typename T, IColumn... Cols, typename... Idxs>
 requires detail::UniqueColumnNames<Cols...> && detail::UniqueMemberPointers<Cols...>
 struct Table<name, T, Columns<Cols...>, Indexes<Idxs...>>
 {
@@ -55,36 +57,31 @@ public:
     static_assert(!(hasAutoIncrementPk && primaryKeyCount != 1),
                   "AUTOINCREMENT primary keys are only allowed when the table has exactly one primary key column.");
 
-    // -----------------------------------------------------------------------
-    //  DDL
-    // -----------------------------------------------------------------------
-    [[nodiscard]] static std::string create_table_sql(bool ifNotExists = true)
+
+    // AST construction. `constexpr` (not `consteval`) - it only needs to run
+    // as part of a `consteval` caller's single evaluation, not force one on
+    // its own; see Column::column_def.
+    [[nodiscard]] static constexpr ast::TableDefNode creation_spec(bool ifNotExists)
     {
-        std::string sql = "CREATE TABLE ";
-        if (ifNotExists) sql += "IF NOT EXISTS ";
-        sql        += std::string(tableName) + " (";
-        bool first  = true;
+        ast::TableDefNode spec;
+        spec.table                     = tableName;
+        spec.if_not_exists             = ifNotExists;
+
         ([&]() constexpr
         {
-            if (!first) sql += ", ";
-            sql   += Cols::ddl();
-            first  = false;
+            spec.columns.emplace_back(Cols::column_def());
+            if constexpr (Cols::isPrimaryKey)
+            {
+                spec.constraints.emplace_back(ast::PrimaryKeyConstraintNode{
+                    .column_name = std::string(Cols::columnName),
+                    .autoincrement = Cols::isAutoincrement,
+                });
+            }
         }(), ...);
-        sql += ",";
-        sql += primary_key_sql();
-        sql += ");";
-        return sql;
-    }
 
-    // emit all CREATE INDEX statements for this table.
-    [[nodiscard]] static std::string create_indexes_sql(bool ifNotExists = true)
-    {
-        std::string sql;
-        ([&]<typename Idx>()
-        {
-            sql += Idx::template create_index_sql<Table>(ifNotExists) + "\n";
-        }.template operator()<Idxs>(), ...);
-        return sql;
+        (spec.indices.emplace_back(Idxs::template creation_spec<Table>(ifNotExists)), ...);
+
+        return spec;
     }
 
     // -----------------------------------------------------------------------
@@ -109,42 +106,37 @@ public:
     }
 
     // -----------------------------------------------------------------------
-    //  Hydration: populate a T from a statement row, starting at col_offset
+    //  Fully-qualified column name ("tableName.columnName") materialised as
+    //  a FixedString with static storage duration.
+    //  See BasicQuery's qualified_column_name for the multi-table variant.
     // -----------------------------------------------------------------------
-    [[nodiscard]] static T hydrate(const engine::SqliteStatement& stmt, const i32 colOffset = 0)
+    template <IColumn Col>
+    static constexpr auto fully_qualified_name()
     {
-        T obj{};
-        i32 idx = colOffset;
-        ([&]()
-        {
-            using FT  = Cols::FieldType;
-            auto& fld = obj.*(Cols::member);
-            fld = SqliteTypeAdapter<FT>::read(stmt, idx++);
-        }(), ...);
-        return obj;
-    }
+        constexpr std::string_view tbl = tableName;
+        constexpr std::string_view col = Col::columnName;
+        constexpr std::size_t N        = tbl.size() + 1 + col.size() + 1;
 
-private:
-
-    [[nodiscard]] static std::string primary_key_sql()
-    {
-        std::string sql = " PRIMARY KEY (";
-        bool first      = true;
-        ([&]() constexpr
-        {
-            if constexpr (Cols::isPrimaryKey)
-            {
-                if (!first) sql += ", ";
-                sql += Cols::columnName;
-                if constexpr (Cols::isAutoincrement)
-                {
-                    sql += " AUTOINCREMENT";
-                }
-                first = false;
-            }
-        }(), ...);
-        sql += ")";
-        return sql;
+        char buffer[N]{};
+        std::size_t idx = 0;
+        for (char c : tbl) { buffer[idx++] = c; }
+        buffer[idx++] = '.';
+        for (char c : col) { buffer[idx++] = c; }
+        buffer[idx] = '\0';
+        return FixedString<N>(buffer);
     }
 };
+namespace detail
+{
+template <typename T>
+struct is_table : std::false_type
+{};
+
+template <FixedString name, typename T, typename ColPack, typename IdxPack>
+struct is_table<Table<name, T, ColPack, IdxPack>> : std::true_type
+{};
+} // namespace detail
+
+export template <typename T>
+concept ITable = detail::is_table<T>::value;
 } // namespace tewi

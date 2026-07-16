@@ -19,9 +19,21 @@ struct table_hydrator
 {
     using TResult = TableType::RowType;
 
+    // Hydration: populate a RowType from a statement row, starting at offset.
     [[nodiscard]] TResult operator()(const engine::SqliteStatement& stmt, i32 offset = 0) const
     {
-        return TableType::hydrate(stmt, offset);
+        TResult obj{};
+        i32 idx = offset;
+        [&]<typename... Cols>(std::tuple<Cols...>)
+        {
+            ([&]()
+            {
+                using FT  = Cols::FieldType;
+                auto& fld = obj.*(Cols::member);
+                fld = SqliteTypeAdapter<FT>::read(stmt, idx++);
+            }(), ...);
+        }(typename TableType::ColumnsTuple{});
+        return obj;
     }
 };
 
@@ -32,8 +44,8 @@ struct pair_hydrator
 
     [[nodiscard]] TResult operator()(const engine::SqliteStatement& stmt, i32 offset = 0) const
     {
-        return {LTable::hydrate(stmt, offset),
-                RTable::hydrate(stmt, offset + static_cast<i32>(LTable::columnsCount))};
+        return {table_hydrator<LTable>{}(stmt, offset),
+                table_hydrator<RTable>{}(stmt, offset + static_cast<i32>(LTable::columnsCount))};
     }
 };
 

@@ -1,5 +1,6 @@
 export module tewi:column;
 
+import :ast_spec;
 import :fk_helpers;
 import :pk_helpers;
 import :type_adapter;
@@ -39,26 +40,43 @@ public:
 
     static constexpr bool hasForeignKey = detail::anyOf<detail::isForeignKey<Cs>...>;
 
-    // ------------------------------------------------------------------
-    // DDL fragment for this column (without trailing comma).
-    // ------------------------------------------------------------------
-    [[nodiscard]] static std::string ddl()
+    [[nodiscard]] static constexpr ast::ColumnDefNode column_def()
     {
-        std::string sql = std::string(columnName) + " "
-                          + std::string(SqliteTypeAdapter<FieldType>::affinity)
-                          + detail::constraint_ddl<Cs...>(columnName);
+        ast::ColumnDefNode node{
+            .name          = std::string(columnName),
+            .type_affinity = std::string(SqliteTypeAdapter<FieldType>::affinity)
+        };
 
-        // Append REFERENCES clause for each ForeignKey constraint.
         ([&]() constexpr
         {
-            if constexpr (detail::is_foreign_key<Cs>::value)
+            using C = Cs;
+            if constexpr (std::is_same_v<C, NotNull>)
             {
-                using RT = Cs::Table;
-                sql     += " REFERENCES " + std::string(RT::tableName) + "("
-                    + std::string(RT::template ColumnOf<Cs::member>::columnName) + ")";
+                node.constraints.emplace_back(ast::NotNullConstraintNode{});
+            }
+            else if constexpr (std::is_same_v<C, Unique>)
+            {
+                node.constraints.emplace_back(ast::UniqueConstraintNode{});
+            }
+            else if constexpr (requires { C::expression; })
+            {
+                node.constraints.emplace_back(ast::CheckConstraintNode{std::string(C::expression)});
+            }
+            else if constexpr (requires { C::pattern; })
+            {
+                node.constraints.emplace_back(ast::RegexConstraintNode{std::string(C::pattern)});
+            }
+            else if constexpr (detail::is_foreign_key<C>::value)
+            {
+                using RT = C::Table;
+                node.constraints.emplace_back(ast::ForeignKeyConstraintNode{
+                    std::string(RT::tableName),
+                    std::string(RT::template ColumnOf<C::member>::columnName)
+                });
             }
         }(), ...);
-        return sql;
+
+        return node;
     }
 };
 

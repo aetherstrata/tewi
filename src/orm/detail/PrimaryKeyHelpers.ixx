@@ -83,30 +83,4 @@ using UnwrapSingleTuple = unwrap_single_tuple<T>::type;
 template <typename... Cols>
 using PrimaryKeyType = typename primary_key_type<Cols...>::type;
 
-// -----------------------------------------------------------------------
-//  Build full DDL suffix for a pack of constraints (except FK REFERENCES).
-// -----------------------------------------------------------------------
-template <typename... Cs>
-[[nodiscard]] std::string constraint_ddl(std::string_view col_name)
-{
-    std::string sql{};
-    ([&]()
-    {
-        using C = Cs;
-        if constexpr (requires { C::suffix; })
-        {
-            sql += C::suffix;
-        }
-        if constexpr (requires { C::expression; })
-        {
-            sql += " CHECK(" + C::expression + ")";
-        }
-        if constexpr (requires { C::pattern; })
-        {
-            sql += " CHECK(regexp('" + C::pattern + "', " + col_name + "))";
-        }
-    }(), ...);
-    return sql;
-}
-
 } // namespace tewi::detail

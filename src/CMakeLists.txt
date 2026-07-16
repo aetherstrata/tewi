@@ -36,7 +36,6 @@ target_sources(${PROJECT_NAME} PUBLIC
         orm/Table.ixx
         orm/TableRegistry.ixx
         orm/TypeAdapter.ixx
-        orm/detail/BaseTypeAdapters.ixx
         orm/detail/ColumnHelpers.ixx
         orm/detail/ForeignKeyHelpers.ixx
         orm/detail/MemberTraits.ixx

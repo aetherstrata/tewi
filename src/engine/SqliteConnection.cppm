@@ -17,7 +17,7 @@ SqliteConnection::SqliteConnection(std::string_view path, OpenMode mode)
     _db.reset(raw);
     if (resultCode != SQLITE_OK)
     {
-        LOG_ERR("Failed to open database: {} {}", path, SqliteError::PrettyCode(resultCode));
+        LOG_CRITICAL("Failed to open database: {} {}", path, SqliteError::PrettyCode(resultCode));
         throw SqliteError("Failed to open database: " + std::string(path), resultCode);
     }
 
@@ -27,7 +27,7 @@ SqliteConnection::SqliteConnection(std::string_view path, OpenMode mode)
 
 void SqliteConnection::exec(std::string_view sql)
 {
-    LOG_DBG("Executing SQL query: {}", sql);
+    LOG_DBG("Executing SQL statement: {}", sql);
 
     char* errmsg = nullptr;
     const int rc = sqlite3_exec(handle(), sql.data(), nullptr, nullptr, &errmsg);

@@ -13,9 +13,8 @@ export namespace tewi::engine
  * the caller-supplied context string, the integer SQLite result code, and the
  * human-readable description returned by @c sqlite3_errstr().
  */
-class SqliteError : public std::runtime_error
+struct SqliteError : std::runtime_error
 {
-public:
     /**
      * @brief Construct a SqliteError with a message and SQLite result code.
      *
@@ -23,28 +22,28 @@ public:
      * @param[in] rc      SQLite result code (e.g. `SQLITE_CONSTRAINT`). Defaults to
      *                    `SQLITE_ERROR` when no specific code is available.
      */
-    explicit SqliteError(const std::string& msg, int rc = SQLITE_ERROR)
+    explicit SqliteError(std::string_view msg, int rc = SQLITE_ERROR) noexcept
         : std::runtime_error(std::format("{} {}", msg, PrettyCode(rc)))
-        , code_(rc)
+        , _code(rc)
     {}
 
     /**
      * @brief Returns the raw SQLite result code associated with this error.
      * @return SQLite result code (one of the `SQLITE_*` integer constants).
      */
-    [[nodiscard]] int code() const noexcept { return code_; }
+    [[nodiscard]] int code() const noexcept { return _code; }
 
     /**
-     * @brief Get the string representation of a SQLite error code.
+     * @brief Get the string representation of an SQLite error code.
      * @param rc SQLite result code to format.
      * @return A string containing the SQLite error code and its text description.
      */
-    [[nodiscard]] static std::string PrettyCode(int rc)
+    [[nodiscard]] static std::string PrettyCode(int rc) noexcept
     {
         return std::format("[SQLite error {}: {}]", std::to_string(rc), sqlite3_errstr(rc));
     }
 
 private:
-    int code_; ///< SQLite result code stored for programmatic inspection.
+    int _code; ///< SQLite result code stored for programmatic inspection.
 };
 } // namespace tewi::engine

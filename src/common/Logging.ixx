@@ -2,10 +2,10 @@ export module tewi:logging;
 
 import std;
 
-export namespace tewi
+namespace tewi
 {
 /// Severity levels for log messages, ordered from least to most severe.
-enum class LogLevel {
+export enum class LogLevel {
     Trace,   ///< Fine-grained diagnostic events
     Debug,   ///< Debug information useful during development
     Info,    ///< General informational messages
@@ -13,7 +13,6 @@ enum class LogLevel {
     Error,   ///< Errors indicating an operation failed
     Critical ///< Critical failures requiring immediate attention
 };
-
 
 /**
  * @brief Signature of a user-provided logging callback.
@@ -27,8 +26,8 @@ enum class LogLevel {
  * @param msg Formatted log message text.
  * @param userData Opaque user pointer provided at logger registration time.
  */
-using LoggerCallback = void (*)(std::source_location loc, LogLevel level, std::string&& msg,
-                                void* userData);
+export using LoggerCallback =
+    void (*)(std::source_location loc, LogLevel level, std::string&& msg, void* userData);
 
 /**
  * @brief Registers a custom logger callback.
@@ -42,7 +41,7 @@ using LoggerCallback = void (*)(std::source_location loc, LogLevel level, std::s
  *
  * @note Passing @c nullptr as @p userData is allowed.
  */
-void registerLogger(LoggerCallback callback, void* userData = nullptr) noexcept;
+export void registerLogger(LoggerCallback callback, void* userData = nullptr) noexcept;
 
 /**
  * @brief Restores the default logging behavior.
@@ -50,7 +49,7 @@ void registerLogger(LoggerCallback callback, void* userData = nullptr) noexcept;
  * Clears any previously registered custom logger callback and associated
  * user data.
  */
-void resetLogger() noexcept;
+export void resetLogger() noexcept;
 
 /**
  * @brief Emits a log message.

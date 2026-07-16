@@ -1,5 +1,7 @@
 export module tewi:index;
 
+import :ast_spec;
+import :ast_renderer;
 import :fixed_string;
 
 import std;
@@ -20,30 +22,28 @@ struct Index
 
     static constexpr bool unique = false;
 
+    // AST construction. `constexpr` (not `consteval`) - see Column::column_def
+    // for why: it only needs to run as part of a `consteval` caller's single
+    // evaluation, not force one on its own.
     template <typename TableType>
-    [[nodiscard]] static std::string create_index_sql(bool ifNotExists = true)
+    [[nodiscard]] static constexpr ast::IndexDefNode creation_spec(bool ifNotExists)
     {
-        std::string sql = unique ? "CREATE UNIQUE INDEX " : "CREATE INDEX ";
-        if (ifNotExists)
-        {
-            sql += "IF NOT EXISTS ";
-        }
-        sql += std::string(IndexName) + " ON " + std::string(TableType::tableName) + " (";
+        ast::IndexDefNode spec;
+        spec.index_name    = IndexName;
+        spec.table         = TableType::tableName;
+        spec.if_not_exists = ifNotExists;
+        spec.unique        = unique;
 
-        bool first = true;
         // Fold over MemberPtrs, resolving each to its column name at compile time.
         ([&]<auto MP>()
         {
             constexpr std::string_view col = TableType::template ColumnOf<MP>::columnName;
             static_assert(!col.empty(),
                           "Index: member pointer not mapped to any column in this table.");
-            if (!first) sql += ", ";
-            sql   += std::string(col);
-            first  = false;
+            spec.columns.emplace_back(col);
         }.template operator()<memberPtrs>(), ...);
 
-        sql += ");";
-        return sql;
+        return spec;
     }
 };
 

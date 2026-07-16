@@ -45,7 +45,7 @@ struct AssignmentNode
 
 struct InsertSpec
 {
-    std::string_view table;
+    std::string  table;
     bool or_replace = false;                 ///< OR REPLACE conflict clause
     std::vector<AssignmentNode> assignments; ///< one entry per column
 };
@@ -56,7 +56,7 @@ struct InsertSpec
 
 struct UpdateSpec
 {
-    std::string_view            table;
+    std::string            table;
     std::vector<AssignmentNode> assignments; ///< SET clause (non-PK columns)
     std::vector<PredicateNode>  where;       ///< WHERE clause (PK columns)
 };
@@ -67,7 +67,7 @@ struct UpdateSpec
 
 struct DeleteSpec
 {
-    std::string_view           table;
+    std::string           table;
     std::vector<PredicateNode> where;   ///< WHERE predicates (PK columns)
 };
 
@@ -92,7 +92,7 @@ struct ProjectionNode
 
 struct TableRef
 {
-    std::string_view name;       ///< compile-time table name
+    std::string name;       ///< compile-time table name
     std::string all_columns_sql; ///< pre-built "t.c1, t.c2, ..."
 };
 
@@ -118,6 +118,89 @@ struct OrderNode
 {
     std::string column;
     Order direction = Order::ASC;
+};
+
+// -----------------------------------------------------------------------
+// Table-level constraint nodes (DDL) - one node type per constraint kind.
+// -----------------------------------------------------------------------
+
+struct PrimaryKeyConstraintNode
+{
+    std::string column_name;
+    bool autoincrement = false;
+};
+
+using TableConstraintNode = std::variant<
+    PrimaryKeyConstraintNode
+>;
+
+// -----------------------------------------------------------------------
+// Column-level constraint nodes (DDL) - one node type per constraint kind.
+// -----------------------------------------------------------------------
+
+struct NotNullConstraintNode {};
+
+struct UniqueConstraintNode {};
+
+struct CheckConstraintNode
+{
+    std::string expression; ///< raw boolean expression, e.g. "age >= 0"
+};
+
+struct RegexConstraintNode
+{
+    std::string pattern; ///< regex pattern; rendered as CHECK(regexp('<pattern>', <col>))
+};
+
+struct ForeignKeyConstraintNode
+{
+    std::string ref_table;
+    std::string ref_column;
+};
+
+using ColumnConstraintNode = std::variant<
+    NotNullConstraintNode,
+    UniqueConstraintNode,
+    CheckConstraintNode,
+    RegexConstraintNode,
+    ForeignKeyConstraintNode
+>;
+
+// -----------------------------------------------------------------------
+// ColumnDefNode – one column definition inside CREATE TABLE
+// -----------------------------------------------------------------------
+
+struct ColumnDefNode
+{
+    std::string name;
+    std::string type_affinity;
+    std::vector<ColumnConstraintNode> constraints;
+};
+
+// -----------------------------------------------------------------------
+// CreateIndexSpec – CREATE [UNIQUE] INDEX [IF NOT EXISTS] <name> ON <table> (<cols>)
+// -----------------------------------------------------------------------
+
+struct IndexDefNode
+{
+    std::string index_name;
+    std::string table;
+    bool if_not_exists = true;
+    bool unique = false;
+    std::vector<std::string> columns;
+};
+
+// -----------------------------------------------------------------------
+// CreateTableSpec – CREATE TABLE [IF NOT EXISTS] <table> (<cols>, PRIMARY KEY (...))
+// -----------------------------------------------------------------------
+
+struct TableDefNode
+{
+    std::string table;
+    bool if_not_exists = true;
+    std::vector<ColumnDefNode> columns;
+    std::vector<IndexDefNode> indices;
+    std::vector<TableConstraintNode> constraints;
 };
 
 // -----------------------------------------------------------------------

@@ -14,7 +14,7 @@ public:
     {
         tewi::registerLogger([](std::source_location loc, tewi::LogLevel level, std::string&& msg, void* user_data) static
         {
-            auto getLevelString = [](tewi::LogLevel lvl)
+            static auto getLevelString = [](tewi::LogLevel lvl)
             {
                 switch (lvl)
                 {

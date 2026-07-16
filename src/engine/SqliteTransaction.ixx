@@ -1,4 +1,4 @@
-export module tewi:sqlite_transaction;
+module tewi:sqlite_transaction;
 
 namespace tewi::engine
 {
@@ -27,7 +27,7 @@ class SqliteConnection;
  *       @c SAVEPOINT commands directly via @c SqliteDatabase::exec() if
  *       nesting is required.
  */
-export class SqliteTransaction
+class SqliteTransaction
 {
 public:
     /**
