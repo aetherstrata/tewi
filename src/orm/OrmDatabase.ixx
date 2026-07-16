@@ -47,71 +47,58 @@ public:
     // ----------------------------------------------------------------
     // select<Row>() - registered row type -> SelectQuery equivalent
     // ----------------------------------------------------------------
-    template <HasRegisteredTable Row>
-    [[nodiscard]] auto select() const &
+    template <HasRegisteredTable Row, typename Self>
+    requires std::is_lvalue_reference_v<Self>
+    [[nodiscard]] auto select(this Self&& self)
     {
-        return detail::make_basic_query<typename TableRegistry<Row>::TableType>(_db);
+        return detail::make_basic_query<typename TableRegistry<Row>::TableType>(self._db);
     }
-
-    template <HasRegisteredTable Row>
-    auto select() const && = delete;
 
     // ----------------------------------------------------------------
     // select<TableType>() - explicit table descriptor
     // ----------------------------------------------------------------
-    template <ITable TableType>
-    [[nodiscard]] auto select() const &
+    template <ITable TableType, typename Self>
+    requires std::is_lvalue_reference_v<Self>
+    [[nodiscard]] auto select(this Self&& self)
     {
-        return detail::make_basic_query<TableType>(_db);
+        return detail::make_basic_query<TableType>(self._db);
     }
-
-    template <ITable TableType>
-    auto select() const && = delete;
 
     // ----------------------------------------------------------------
     // select<&T::col1, &T::col2, ...>()  - projected columns
     // ----------------------------------------------------------------
-    template <auto... MemberPtrs>
-        requires detail::HomogeneousMemberPtrs<MemberPtrs...>
-    [[nodiscard]] auto select() const &
+    template <auto... MemberPtrs, typename Self>
+    requires detail::HomogeneousMemberPtrs<MemberPtrs...>
+          && std::is_lvalue_reference_v<Self>
+    [[nodiscard]] auto select(this Self&& self)
     {
         using Obj = detail::ObjectOf<detail::firstOf<MemberPtrs...>>;
         static_assert(HasRegisteredTable<Obj>,
                       "select<MemberPtrs...>: owner row type is not registered.");
 
-        return detail::make_basic_query<typename TableRegistry<Obj>::TableType>(_db)
+        return detail::make_basic_query<typename TableRegistry<Obj>::TableType>(self._db)
             .template select<MemberPtrs...>();
     }
-
-    template <auto... MemberPtrs>
-        requires detail::HomogeneousMemberPtrs<MemberPtrs...>
-    auto select() const && = delete;
 
     // ----------------------------------------------------------------
     // repo<TableType>() - full CRUD repository
     // ----------------------------------------------------------------
-    template <ITable TableType>
-    [[nodiscard]] auto repo() const &
+    template <ITable TableType, typename Self>
+    requires std::is_lvalue_reference_v<Self>
+    [[nodiscard]] auto repo(this Self&& self)
     {
-        return Repository<TableType>{_db};
+        return Repository<TableType>{self._db};
     }
-
-    template <ITable TableType>
-    auto repo() const && = delete;
 
     // ----------------------------------------------------------------
     // count<Row>() - convenience shorthand
     // ----------------------------------------------------------------
-    template <typename Row>
-        requires HasRegisteredTable<Row>
-    [[nodiscard]] i64 count() const &
+    template <typename Row, typename Self>
+    requires HasRegisteredTable<Row> && std::is_lvalue_reference_v<Self>
+    [[nodiscard]] i64 count(this Self&& self)
     {
-        return repo<typename TableRegistry<Row>::TableType>().count();
+        return self.template repo<typename TableRegistry<Row>::TableType>().count();
     }
-
-    template <typename Row>
-        requires HasRegisteredTable<Row>
-    i64 count() const && = delete;
 
     // ----------------------------------------------------------------
     // Transactions / raw access
@@ -119,13 +106,19 @@ public:
     // Both hand out a borrow of _db, so both delete their && overload for the
     // same reason as select()/repo() above.
     // ----------------------------------------------------------------
-    [[nodiscard]] engine::SqliteTransaction beginTransaction() & { return _db.beginTransaction(); }
+    template <typename Self>
+    requires std::is_lvalue_reference_v<Self>
+    [[nodiscard]] engine::SqliteTransaction beginTransaction(this Self&& self)
+    {
+        return self._db.beginTransaction();
+    }
 
-    engine::SqliteTransaction beginTransaction() && = delete;
-
-    [[nodiscard]] engine::SqliteConnection& rawAccess() & noexcept { return _db; }
-
-    engine::SqliteConnection& rawAccess() && = delete;
+    template <typename Self>
+    requires std::is_lvalue_reference_v<Self>
+    [[nodiscard]] engine::SqliteConnection& rawAccess(this Self&& self) noexcept
+    {
+        return self._db;
+    }
 
     template <ITable... Tables>
     void createTable(bool ifNotExists = true)
