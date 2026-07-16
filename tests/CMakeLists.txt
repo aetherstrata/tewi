@@ -16,6 +16,7 @@ add_executable(${PROJECT_NAME}_tests
         PrimaryKeyTests.cpp
         OrmTests.cpp
         QueryChainTests.cpp
+        TransactionTests.cpp
         OrmDatabaseLifetimeTests.cpp
         LogInitializer.cpp
         TableRegistryTests.cpp

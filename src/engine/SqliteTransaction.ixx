@@ -1,5 +1,7 @@
 module tewi:sqlite_transaction;
 
+import std;
+
 namespace tewi::engine
 {
 class SqliteConnection;
@@ -23,9 +25,11 @@ class SqliteConnection;
  *   }
  * @endcode
  *
- * @note Nested transactions are not supported by this class. Use SQLite
- *       @c SAVEPOINT commands directly via @c SqliteDatabase::exec() if
- *       nesting is required.
+ * @note Guards nest. The outermost opens the real transaction with @c BEGIN and
+ *       is the only one whose @c commit() reaches the disk; an inner guard opens
+ *       a @c SAVEPOINT, and its @c commit() merely merges that level into the
+ *       enclosing one. An inner @c rollback() therefore discards only its own
+ *       level, leaving the enclosing transaction open and committable.
  */
 class SqliteTransaction
 {
@@ -80,7 +84,12 @@ public:
     void rollback();
 
 private:
-    SqliteConnection& _db;     ///< Reference to the owning database connection.
+    SqliteConnection& _db;   ///< Reference to the owning database connection.
     bool _committed = false; ///< Set to @c true once @c Commit() or @c Rollback() has been called.
+
+    /// Name of this guard's savepoint, or empty when this guard opened the real
+    /// transaction with @c BEGIN. Which one it is decides the verbs used to
+    /// commit and roll back.
+    std::string _savepoint;
 };
 } // namespace tewi::engine

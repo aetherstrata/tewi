@@ -71,12 +71,8 @@ struct CanCount
     : std::bool_constant<requires { std::declval<Db>().template count<User>(); }> {};
 
 template <typename Db>
-struct CanBeginTransaction
-    : std::bool_constant<requires { std::declval<Db>().beginTransaction(); }> {};
-
-template <typename Db>
-struct CanRawAccess
-    : std::bool_constant<requires { std::declval<Db>().rawAccess(); }> {};
+struct CanTransaction
+    : std::bool_constant<requires { std::declval<Db>().transaction([] {}); }> {};
 
 template <typename Db>
 struct CanCreateTable
@@ -100,8 +96,7 @@ TEST_CASE("OrmDatabase: every borrowing accessor rejects rvalues", "[orm][lifeti
     STATIC_REQUIRE(BorrowGuarded<CanSelectProjection>);
     STATIC_REQUIRE(BorrowGuarded<CanRepo>);
     STATIC_REQUIRE(BorrowGuarded<CanCount>);
-    STATIC_REQUIRE(BorrowGuarded<CanBeginTransaction>);
-    STATIC_REQUIRE(BorrowGuarded<CanRawAccess>);
+    STATIC_REQUIRE(BorrowGuarded<CanTransaction>);
 }
 
 TEST_CASE("OrmDatabase: const lvalues are still accepted", "[orm][lifetime]")
@@ -131,6 +126,18 @@ TEST_CASE("OrmDatabase: the call shape this prevents", "[orm][lifetime]")
                                   OrmDatabase>);
     STATIC_REQUIRE(!CanSelectRow<decltype(InMemory())>::value);
     STATIC_REQUIRE(!CanRepo<decltype(InMemory())>::value);
+}
+
+TEST_CASE("OrmDatabase: documented projection result types", "[orm][lifetime]")
+{
+    // The select<MemberPtrs...> doc claims several members project to a tuple
+    // while a single member projects to that field's type alone. Pin it.
+    using Two = decltype(std::declval<OrmDatabase&>()
+                             .select<&User::id, &User::username>())::result_type;
+    STATIC_REQUIRE(std::is_same_v<Two, std::tuple<i32, std::string>>);
+
+    using One = decltype(std::declval<OrmDatabase&>().select<&User::username>())::result_type;
+    STATIC_REQUIRE(std::is_same_v<One, std::string>);
 }
 
 TEST_CASE("OrmDatabase: ownership semantics", "[orm][lifetime]")

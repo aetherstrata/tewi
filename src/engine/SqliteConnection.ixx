@@ -136,18 +136,44 @@ public:
     [[nodiscard]] SqliteStatement prepare(std::string_view sql);
 
     /**
-     * @brief Begins a scoped database transaction.
+     * @brief Begins a scoped database transaction, nesting if one is already open.
      *
-     * @details Executes @c BEGIN; immediately. The returned @c SqliteTransaction object
-     * will automatically issue @c ROLLBACK; in its destructor if @c commit() was
-     * never called, providing strong exception safety for multi-statement
-     * operations.
+     * @details The returned @c SqliteTransaction issues @c ROLLBACK in its
+     * destructor unless @c commit() was called, giving strong exception safety
+     * for multi-statement operations.
+     *
+     * Guards nest. The outermost opens a real transaction with @c BEGIN; an
+     * inner one opens a @c SAVEPOINT instead, since SQLite rejects a @c BEGIN
+     * inside an open transaction. Nesting is not exotic here - the ORM opens
+     * transactions of its own (batch insert does), so any caller-held guard
+     * would otherwise collide with them.
      *
      * @return A @c SqliteTransaction RAII guard bound to this database.
      *
-     * @throws SqliteError if @c BEGIN fails (e.g. nested explicit transactions).
+     * @throws SqliteError if @c BEGIN or @c SAVEPOINT fails.
      */
     [[nodiscard]] SqliteTransaction beginTransaction();
+
+    /**
+     * @brief Reports whether a transaction is currently open on this connection.
+     *
+     * @details Wraps @c sqlite3_get_autocommit(), which is the connection's own
+     * view of its state rather than a count this class maintains - so it stays
+     * accurate even if a transaction was opened by raw SQL.
+     *
+     * @return @c true when a transaction is open, @c false in autocommit mode.
+     */
+    [[nodiscard]] bool inTransaction() const noexcept;
+
+    /**
+     * @brief Returns a savepoint name unique to this connection.
+     *
+     * @details Used by @c SqliteTransaction to name nested savepoints. SQLite
+     * permits duplicate savepoint names and resolves to the innermost match, but
+     * distinct names keep a mistake an error rather than a silent release of the
+     * wrong level.
+     */
+    [[nodiscard]] std::string nextSavepointName();
 
     /**
      * @brief Returns the raw @c sqlite3* handle for low-level SQLite API calls.
@@ -212,5 +238,10 @@ private:
 
     /// SQLite database file path
     std::filesystem::path _path;
+
+    /// Monotonic source of unique savepoint names. Never reset: a name only has
+    /// to be unique among the savepoints live at one moment, and never reusing
+    /// one is the cheapest way to guarantee that.
+    u64 _savepointCounter = 0;
 };
 } // namespace tewi::engine

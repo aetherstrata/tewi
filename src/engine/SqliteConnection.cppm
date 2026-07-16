@@ -55,6 +55,17 @@ SqliteTransaction SqliteConnection::beginTransaction()
     return SqliteTransaction(*this);
 }
 
+bool SqliteConnection::inTransaction() const noexcept
+{
+    // Autocommit is on exactly when no transaction is open.
+    return sqlite3_get_autocommit(handle()) == 0;
+}
+
+std::string SqliteConnection::nextSavepointName()
+{
+    return "tewi_sp_" + std::to_string(++_savepointCounter);
+}
+
 int SqliteConnection::changes() const noexcept
 {
     return sqlite3_changes(_db.get());
