@@ -9,11 +9,6 @@ import std;
 
 namespace tewi::detail
 {
-template <typename TResult>
-concept QueryHydrator = requires(const engine::SqliteStatement& stmt, i32 offset) {
-    { TResult{} };
-};
-
 template <ITable TableType>
 struct table_hydrator
 {

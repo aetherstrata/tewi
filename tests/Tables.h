@@ -48,6 +48,15 @@ struct SimpleEntity
     std::string value;
 };
 
+/// Two foreign keys pointing at the same table - join<> cannot pick a side.
+struct Message
+{
+    i32 id           = 0;
+    i32 sender_id    = 0;
+    i32 recipient_id = 0;
+    std::string body;
+};
+
 /// Plain old struct
 struct UnregisteredEntity
 {
@@ -101,6 +110,15 @@ using SimpleEntityTable = Table<"simple_entities", SimpleEntity,
         Column<"id", &SimpleEntity::id, PrimaryKey<>>,
         Column<"value", &SimpleEntity::value>
     >>;
+
+/// Both sender_id and recipient_id reference users.id.
+using MessageTable = Table<"messages", Message,
+    Columns<
+        Column<"id", &Message::id, PrimaryKey<>>,
+        Column<"sender_id", &Message::sender_id, ForeignKey<UserTable, &User::id>>,
+        Column<"recipient_id", &Message::recipient_id, ForeignKey<UserTable, &User::id>>,
+        Column<"body", &Message::body, NotNull>
+    >>;
 } // namespace tewi::tests
 
 #include "tewi/RegisterTable.h"
@@ -110,5 +128,6 @@ TEWI_REGISTER_TABLE(tewi::tests::OrderItemTable)
 TEWI_REGISTER_TABLE(tewi::tests::PostTable)
 TEWI_REGISTER_TABLE(tewi::tests::ThreeKeyCompositeTable)
 TEWI_REGISTER_TABLE(tewi::tests::SimpleEntityTable)
+TEWI_REGISTER_TABLE(tewi::tests::MessageTable)
 
 #endif // TEWI_TABLES_H

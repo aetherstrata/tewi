@@ -12,8 +12,9 @@ SqliteConnection::SqliteConnection(std::string_view path, OpenMode mode)
 {
     LOG_INFO("Opening database at path: {}", path);
 
-    sqlite3* raw         = nullptr;
-    const int resultCode = sqlite3_open_v2(path.data(), &raw, std::to_underlying(mode), nullptr);
+    sqlite3* raw = nullptr;
+    // _path, not path: string_view::data() carries no NUL-termination guarantee.
+    const int resultCode = sqlite3_open_v2(_path.c_str(), &raw, std::to_underlying(mode), nullptr);
     _db.reset(raw);
     if (resultCode != SQLITE_OK)
     {
@@ -29,8 +30,11 @@ void SqliteConnection::exec(std::string_view sql)
 {
     LOG_DBG("Executing SQL statement: {}", sql);
 
+    // sql.data() carries no NUL-termination guarantee; sqlite3_exec needs one.
+    const std::string sqlText(sql);
+
     char* errmsg = nullptr;
-    const int rc = sqlite3_exec(handle(), sql.data(), nullptr, nullptr, &errmsg);
+    const int rc = sqlite3_exec(handle(), sqlText.c_str(), nullptr, nullptr, &errmsg);
     if (rc != SQLITE_OK)
     {
         const std::string msg = errmsg != nullptr ? errmsg : "(no message)";

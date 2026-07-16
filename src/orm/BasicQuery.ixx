@@ -125,6 +125,12 @@ class BasicQuery
 
     using FirstTable = std::tuple_element_t<0, std::tuple<Tables...>>;
 
+    // join()/joinOn()/select() return a differently-parameterised BasicQuery and
+    // must hand it this instance's bound params, so every instantiation needs
+    // access to every other instantiation's private carry-over constructor.
+    template <typename, typename, ITable...>
+    friend class BasicQuery;
+
 public:
     using result_type   = TResult;
     using hydrator_type = THydrator;
@@ -219,13 +225,21 @@ public:
         using LT = FirstTable;
         using RT = TargetTable;
 
-        constexpr bool fwd = LT::template hasFkTo<RT>;
-        constexpr bool rev = RT::template hasFkTo<LT>;
-        static_assert(fwd || rev,
+        constexpr usize fwdCount = LT::template fkCountTo<RT>;
+        constexpr usize revCount = RT::template fkCountTo<LT>;
+
+        static_assert(fwdCount + revCount != 0,
                       "join<TargetTable>: no ForeignKey<> found between the two tables. "
                       "Use joinOn<&L::col, &R::col>().");
-        static_assert(!(fwd && rev), "join<TargetTable>: FK exists in both directions - ambiguous. "
-                                     "Use joinOn<&L::col, &R::col>().");
+        static_assert(!(fwdCount > 0 && revCount > 0),
+                      "join<TargetTable>: FK exists in both directions - ambiguous. "
+                      "Use joinOn<&L::col, &R::col>().");
+        static_assert(fwdCount <= 1 && revCount <= 1,
+                      "join<TargetTable>: several columns carry a ForeignKey<> to the same table "
+                      "(e.g. sender_id and recipient_id both referencing users.id), so the join "
+                      "column is ambiguous. Name it explicitly with joinOn<&L::col, &R::col>().");
+
+        constexpr bool fwd = fwdCount == 1;
 
         if constexpr (fwd)
         {
@@ -248,7 +262,7 @@ public:
 
         return BasicQuery<std::pair<typename LT::RowType, typename RT::RowType>,
                           detail::pair_hydrator<LT, RT>, LT, RT>
-        (_db, std::move(_spec), detail::make_pair_hydrator<LT, RT>());
+        (_db, std::move(_spec), std::move(_params), p_counter, detail::make_pair_hydrator<LT, RT>());
     }
 
     // ----------------------------------------------------------------
@@ -257,13 +271,19 @@ public:
     template <auto LeftMp, auto RightMp, ast::JoinKind Kind = ast::JoinKind::Inner>
     [[nodiscard]] auto joinOn() &&
     {
+        static_assert(Kind == ast::JoinKind::Inner,
+                      "joinOn<LMp,RMp,Kind>: only Inner is supported. An outer join can produce "
+                      "a row with no match on one side, and the hydrator has no way to represent "
+                      "that absence - every column would read back as 0 / \"\", indistinguishable "
+                      "from real data. Pending optional-aware hydration.");
+
         using LObj = detail::ObjectOf<LeftMp>;
         using RObj = detail::ObjectOf<RightMp>;
         static_assert(HasRegisteredTable<LObj> && HasRegisteredTable<RObj>,
                       "joinOn<LMp,RMp>: both member owner types must be registered.");
 
-        using LT = TableRegistry<LObj>::TableType;
-        using RT = TableRegistry<RObj>::TableType;
+        using LT = detail::OwnerTable<LeftMp>;
+        using RT = detail::OwnerTable<RightMp>;
 
         constexpr std::string_view lc = LT::template ColumnOf<LeftMp>::columnName;
         constexpr std::string_view rc = RT::template ColumnOf<RightMp>::columnName;
@@ -280,7 +300,7 @@ public:
 
         return BasicQuery<std::pair<typename LT::RowType, typename RT::RowType>,
                           detail::pair_hydrator<LT, RT>, LT, RT>
-        (_db, std::move(_spec), detail::make_pair_hydrator<LT, RT>());
+        (_db, std::move(_spec), std::move(_params), p_counter, detail::make_pair_hydrator<LT, RT>());
     }
 
     // ----------------------------------------------------------------
@@ -303,7 +323,8 @@ public:
         _spec.projection = std::move(proj);
 
         return BasicQuery<ProjResult, detail::projection_hydrator<MemberPtrs...>, Tables...>(
-            _db, std::move(_spec), detail::make_projection_hydrator<MemberPtrs...>());
+            _db, std::move(_spec), std::move(_params), p_counter,
+            detail::make_projection_hydrator<MemberPtrs...>());
     }
 
     // ----------------------------------------------------------------
@@ -311,19 +332,22 @@ public:
     // ----------------------------------------------------------------
     [[nodiscard]] std::vector<TResult> toVector() const
     {
-        auto stmt = prepare();
+        auto stmt = prepare(_spec);
         std::vector<TResult> out;
         while (stmt.step()) out.emplace_back(_hydrator(stmt, 0));
         return out;
     }
 
     // ----------------------------------------------------------------
-    // Terminal: first row or nullopt
+    // Terminal: first row or nullopt.
+    // Renders LIMIT 1 from a local copy: the query object stays reusable.
     // ----------------------------------------------------------------
-    [[nodiscard]] std::optional<TResult> firstOrDefault()
+    [[nodiscard]] std::optional<TResult> firstOrDefault() const
     {
-        _spec.limit = 1;
-        auto stmt = prepare();
+        ast::SelectSpec spec = _spec;
+        spec.limit = 1;
+
+        auto stmt = prepare(spec);
         if (!stmt.step()) return std::nullopt;
         return _hydrator(stmt, 0);
     }
@@ -337,18 +361,23 @@ public:
     }
 
     // ----------------------------------------------------------------
-    // count() - count rows matching an existing BasicQuery's filters
+    // count() - count rows matching an existing BasicQuery's filters.
+    // Rewrites a local copy of the spec: the query object stays reusable
+    // (its projection still matches TResult afterwards).
     // ----------------------------------------------------------------
-    [[nodiscard]] i64 count()
+    [[nodiscard]] i64 count() const
     {
-        _spec.projection.kind     = ast::ProjectionKind::CountStar;
-        _spec.projection.distinct = false;
-        _spec.projection.columns.clear();
-        _spec.order_by.clear(); // ORDER BY is meaningless for COUNT
-        _spec.limit.reset();
-        _spec.offset.reset();
+        ast::SelectSpec spec = _spec;
+        spec.projection.kind = ast::ProjectionKind::CountStar;
+        spec.order_by.clear(); // ORDER BY is meaningless for COUNT
+        spec.limit.reset();
+        spec.offset.reset();
 
-        auto stmt = prepare();
+        // distinct / distinct_col / columns are deliberately left alone: the
+        // CountStar renderer reads them to pick COUNT(DISTINCT col) over
+        // COUNT(*). Clearing them here is what made distinct().count()
+        // silently return the row count instead of the distinct-value count.
+        auto stmt = prepare(spec);
         if (!stmt.step()) return 0;
         return SqliteTypeAdapter<i64>::read(stmt, 0);
     }
@@ -369,7 +398,11 @@ public:
 
         Iterator() = default;
 
-        Iterator(engine::SqliteConnection& db, ast::CompiledShape cq, ast::BoundParams params, THydrator hydrator)
+        // params is taken by const& - the binders are applied here and never
+        // needed again, so the iterator does not own them. This is what lets
+        // begin() stay const over a move-only BoundParams member.
+        Iterator(engine::SqliteConnection& db, ast::CompiledShape cq,
+                 const ast::BoundParams& params, THydrator hydrator)
             : _stmt(std::make_shared<engine::SqliteStatement>(db.handle(), cq.sql()))
             , _hydrator(std::move(hydrator))
         {
@@ -386,8 +419,15 @@ public:
             return *this;
         }
 
+        // std::weakly_incrementable (and so std::input_iterator) requires i++.
+        // Returns void: the previous row is already gone once we step.
+        void operator++(int) { ++*this; }
+
+        // No operator!=: C++20 synthesises it from operator==, including the
+        // reversed (sentinel != iterator) form that sentinel_for requires.
+        // Declaring one explicitly makes those reversed forms ambiguous, which
+        // is what stopped this type from modelling std::sentinel_for.
         [[nodiscard]] bool operator==(Sentinel) const noexcept { return !_cur.has_value(); }
-        [[nodiscard]] bool operator!=(Sentinel s) const noexcept { return !(*this == s); }
 
     private:
         std::shared_ptr<engine::SqliteStatement> _stmt;
@@ -405,27 +445,44 @@ public:
 
     [[nodiscard]] Iterator begin() const
     {
-        return Iterator(_db, ast::compile(_spec), _hydrator);
+        return Iterator(_db, ast::compile(_spec), _params, _hydrator);
     }
 
     [[nodiscard]] Sentinel end() const noexcept { return {}; }
 
     // ----------------------------------------------------------------
-    // Introspection (for Repository::countWhere etc.)
+    // Introspection
     // ----------------------------------------------------------------
     [[nodiscard]] const ast::SelectSpec& spec() const noexcept { return _spec; }
 
 private:
+    // Carry-over constructor used by join()/joinOn()/select() to build the
+    // next query in the chain. The predicates live in _spec.where but their
+    // values live in _params: handing over one without the other renders a
+    // ":pN" that nothing binds, which SQLite reads as NULL - a silent empty
+    // result rather than an error. p_counter travels too, so later
+    // predicates cannot reissue a name already present in _params.
+    BasicQuery(engine::SqliteConnection& db, ast::SelectSpec spec, ast::BoundParams params,
+               i32 counter, THydrator hydrator)
+        : _db(db)
+        , _spec(std::move(spec))
+        , _params(std::move(params))
+        , _hydrator(std::move(hydrator))
+        , p_counter(counter)
+    {}
+
     engine::SqliteConnection& _db;
     ast::SelectSpec _spec;
     ast::BoundParams _params;
     THydrator _hydrator{};
     i32 p_counter = 1;
 
-    // Compile and prepare the statement in one step.
-    [[nodiscard]] engine::SqliteStatement prepare() const
+    // Compile and prepare the given spec in one step. Takes the spec as a
+    // parameter so const terminals can execute a modified copy without
+    // mutating the query object.
+    [[nodiscard]] engine::SqliteStatement prepare(const ast::SelectSpec& spec) const
     {
-        auto cq   = ast::compile(_spec);
+        auto cq   = ast::compile(spec);
         auto stmt = _db.prepare(cq.sql());
         _params.bind(stmt);
         return std::move(stmt);
@@ -436,8 +493,10 @@ private:
     [[nodiscard]] BasicQuery push_predicate(std::string_view col, Compare op, V&& value)
     {
         using RV = std::remove_cvref_t<V>;
-        static_assert(SqliteAdaptable<RV>, "Value type is not adaptable to a SQLite type. "
-                                           "Specialize SqliteTypeAdapter for it.");
+        static_assert(SqliteAdaptable<RV>,
+                      "Value type is not adaptable to a SQLite type. Supported types are "
+                      "i32, i64, f32, f64, bool, std::string, std::vector<u8>, "
+                      "std::vector<std::byte>, and std::optional of any of these.");
 
         const std::string name = ast::makeParamName(p_counter);
         _spec.where.emplace_back(ast::PredicateNode {
@@ -450,31 +509,6 @@ private:
         return std::move(*this);
     }
 
-    // Runtime member-pointer -> "table.col".
-    template <typename Field, typename Obj>
-    [[nodiscard]] std::string runtime_col_name(Field Obj::* mp) const
-    {
-        std::string result;
-
-        ([&]<typename T>()
-        {
-            std::apply([&](auto... col_tags)
-            {
-                ([&]<typename ColType>(ColType col_tag)
-                {
-                    if constexpr (std::is_same_v<decltype(ColType::member), Field Obj::*>)
-                    {
-                        if (ColType::member == mp)
-                        {
-                            result = T::tableName + "." + ColType::columnName;
-                        }
-                    }
-                }(col_tags), ...);
-            }, typename T::ColumnsTuple{});
-        }.template operator()<Tables>(), ...);
-
-        return result;
-    }
 };
 
 // -----------------------------------------------------------------------

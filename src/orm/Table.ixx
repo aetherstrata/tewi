@@ -44,6 +44,11 @@ public:
     template <typename OherTable>
     static constexpr bool hasFkTo = !std::is_void<FkTo<OherTable>>::value;
 
+    /// How many columns carry a ForeignKey to OherTable. More than one means
+    /// FkTo/hasFkTo cannot pick a side; the caller must be explicit.
+    template <typename OherTable>
+    static constexpr usize fkCountTo = detail::count_fks_to<OherTable, Cols...>;
+
     static constexpr std::string_view tableName = name_storage.view();
 
     static constexpr usize columnsCount    = sizeof...(Cols);

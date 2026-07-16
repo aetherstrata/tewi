@@ -15,6 +15,7 @@ add_executable(${PROJECT_NAME}_tests
         ColumnSchemaTests.cpp
         PrimaryKeyTests.cpp
         OrmTests.cpp
+        QueryChainTests.cpp
         LogInitializer.cpp
         TableRegistryTests.cpp
         TableMetaTests.cpp

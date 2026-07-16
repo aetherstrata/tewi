@@ -10,7 +10,17 @@ namespace tewi::ast
 {
     switch (proj.kind)
     {
-    case ProjectionKind::CountStar: return "COUNT(*)";
+    case ProjectionKind::CountStar:
+        // A DISTINCT query counts distinct values, not rows: emitting a plain
+        // COUNT(*) here would silently over-count.
+        if (proj.distinct_col) return "COUNT(DISTINCT " + *proj.distinct_col + ")";
+        if (proj.distinct && proj.columns.size() == 1)
+            return "COUNT(DISTINCT " + proj.columns.front() + ")";
+        // Full-row DISTINCT over several columns would need
+        // SELECT COUNT(*) FROM (SELECT DISTINCT ...), which the spec cannot
+        // express yet. Accurate anyway for whole-table projections, whose
+        // primary key already makes every row unique.
+        return "COUNT(*)";
 
     case ProjectionKind::ColumnList: {
         std::string s = proj.distinct ? "DISTINCT " : "";
@@ -99,7 +109,10 @@ namespace tewi::ast
 
     if (!spec.order_by.empty()) ss << order_sql(spec.order_by);
 
+    // SQLite only accepts OFFSET as a suffix of LIMIT, so an offset with no
+    // limit needs an explicit unbounded one (-1 means "no limit").
     if (spec.limit) ss << " LIMIT " + std::to_string(*spec.limit);
+    else if (spec.offset) ss << " LIMIT -1";
 
     if (spec.offset) ss << " OFFSET " + std::to_string(*spec.offset);
 

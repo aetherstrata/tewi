@@ -74,6 +74,18 @@ struct FindFkTo<TargetTable, First, Rest...>
         typename FindFkTo<TargetTable, Rest...>::type>;
 };
 
+// -----------------------------------------------------------------------
+//  count_fks_to<TargetTable, Cols...>
+//
+//  How many of TableType's columns carry a ForeignKey<TargetTable, ...>.
+//  FindFkTo answers "which is the first" and cannot distinguish one FK from
+//  several, so a table with two FKs to the same target (the classic
+//  sender_id / recipient_id -> users.id shape) would otherwise resolve
+//  silently to whichever column happens to come first.
+// -----------------------------------------------------------------------
+template <typename TargetTable, typename... Cols>
+constexpr usize count_fks_to = (usize{0} + ... + (ColHasFkTo<Cols, TargetTable>::value ? 1 : 0));
+
 template <typename T, typename... Cs>
 consteval bool fk_has_same_type()
 {
